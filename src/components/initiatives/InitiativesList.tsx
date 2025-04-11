@@ -62,13 +62,13 @@ const mockInitiatives = [
 
 const InitiativesList = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all_categories");
 
   // Filter initiatives based on search term and category
   const filteredInitiatives = mockInitiatives.filter(
     (initiative) =>
       initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (categoryFilter === "" || initiative.category === categoryFilter)
+      (categoryFilter === "all_categories" || initiative.category === categoryFilter)
   );
 
   const getStatusColor = (status: string) => {

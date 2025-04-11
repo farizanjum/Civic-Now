@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,8 +88,8 @@ const mockUsers = [
 
 const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all_roles");
+  const [statusFilter, setStatusFilter] = useState("all_status");
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -97,8 +98,8 @@ const AdminUsers = () => {
     return (
       (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
        user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (roleFilter === "" || user.role === roleFilter) &&
-      (statusFilter === "" || user.status === statusFilter)
+      (roleFilter === "all_roles" || user.role === roleFilter) &&
+      (statusFilter === "all_status" || user.status === statusFilter)
     );
   });
   
