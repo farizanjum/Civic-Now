@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ const mockInitiatives = [
 
 const AdminInitiatives = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInitiative, setSelectedInitiative] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -72,7 +73,7 @@ const AdminInitiatives = () => {
   const filteredInitiatives = mockInitiatives.filter((initiative) => {
     return (
       initiative.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (statusFilter === "" || initiative.status === statusFilter)
+      (statusFilter === "all" || initiative.status === statusFilter)
     );
   });
   
@@ -163,7 +164,7 @@ const AdminInitiatives = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all_status">All Status</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
                     <SelectItem value="Under Review">Under Review</SelectItem>

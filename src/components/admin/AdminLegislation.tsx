@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,7 +68,7 @@ const mockLegislation = [
 
 const AdminLegislation = () => {
   const [activeTab, setActiveTab] = useState("drafts");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all_status");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLegislation, setSelectedLegislation] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -79,17 +80,17 @@ const AdminLegislation = () => {
       // Filter by search and status
       return (
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+        (statusFilter === "all_status" || item.status === statusFilter)
       );
     } else if (activeTab === "published" && item.status === "Published") {
       return (
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+        (statusFilter === "all_status" || item.status === statusFilter)
       );
     } else if (activeTab === "archived" && item.status === "Archived") {
       return (
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+        (statusFilter === "all_status" || item.status === statusFilter)
       );
     }
     return false;
