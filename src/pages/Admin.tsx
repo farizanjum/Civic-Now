@@ -65,19 +65,20 @@ const Admin = () => {
             <div className="space-y-6">
               {/* Mobile Navigation - Tab style for smaller screens */}
               <div className="lg:hidden bg-white rounded-lg p-4 shadow-sm overflow-x-auto">
-                <TabsList className="w-full justify-start">
-                  {menuItems.map(item => (
-                    <TabsTrigger
-                      key={item.id}
-                      value={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className="flex items-center gap-1.5 min-w-max"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="w-full justify-start">
+                    {menuItems.map(item => (
+                      <TabsTrigger
+                        key={item.id}
+                        value={item.id}
+                        className="flex items-center gap-1.5 min-w-max"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
               </div>
 
               {/* Tab Content */}
