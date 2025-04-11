@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import VotingProgress from "@/components/voting/VotingProgress";
 import { ThumbsUp, ThumbsDown, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -87,7 +87,7 @@ const VotingPoll = ({
               </span>
               <span>{supportPercentage}%</span>
             </div>
-            <Progress value={supportPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-civic-green" />
+            <VotingProgress value={supportPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-civic-green" />
           </div>
           
           <div className="space-y-1">
@@ -97,7 +97,7 @@ const VotingPoll = ({
               </span>
               <span>{opposePercentage}%</span>
             </div>
-            <Progress value={opposePercentage} className="h-2 bg-gray-100" indicatorClassName="bg-red-500" />
+            <VotingProgress value={opposePercentage} className="h-2 bg-gray-100" indicatorClassName="bg-red-500" />
           </div>
           
           <div className="space-y-1">
@@ -107,7 +107,7 @@ const VotingPoll = ({
               </span>
               <span>{neutralPercentage}%</span>
             </div>
-            <Progress value={neutralPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-amber-400" />
+            <VotingProgress value={neutralPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-amber-400" />
           </div>
         </div>
       </CardContent>

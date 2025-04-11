@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Legislation from "./pages/Legislation";
+import LegislationDetail from "./pages/LegislationDetail";
 import Voting from "./pages/Voting";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/legislation" element={<Legislation />} />
+            <Route path="/legislation/:id" element={<LegislationDetail />} />
             <Route path="/voting" element={<Voting />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

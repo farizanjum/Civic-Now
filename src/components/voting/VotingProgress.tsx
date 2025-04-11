@@ -14,20 +14,20 @@ const VotingProgress = ({
   className, 
   indicatorClassName 
 }: VotingProgressProps) => {
+  // Create a custom style for the progress indicator
+  const customStyles = {
+    "--progress-color": indicatorClassName?.split("bg-")[1]
+  } as React.CSSProperties;
+
   return (
-    <Progress 
-      value={value} 
-      className={className}
-      // Custom styling can be applied through the container class
-      // The indicator is styled through Tailwind's data attributes
-      style={{
-        "--progress-indicator-color": indicatorClassName ? 
-          indicatorClassName.includes("bg-") ? 
-            `var(--${indicatorClassName.split("bg-")[1]})` : 
-            undefined : 
-          undefined
-      } as React.CSSProperties}
-    />
+    <div className={cn("relative w-full h-2 overflow-hidden rounded-full bg-secondary", className)}>
+      <div 
+        className={cn("h-full transition-all", indicatorClassName)}
+        style={{ 
+          width: `${value}%`,
+        }}
+      />
+    </div>
   );
 };
 

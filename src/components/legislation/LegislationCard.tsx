@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Eye, Tag } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface LegislationCardProps {
   id: string;
@@ -60,14 +61,18 @@ const LegislationCard = ({
           <span>{commentCount} comments</span>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
-            <Eye size={16} />
-            <span>View</span>
-          </Button>
-          <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">
-            <MessageSquare size={16} className="mr-1" />
-            <span>Feedback</span>
-          </Button>
+          <Link to={`/legislation/${id}`}>
+            <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <Eye size={16} />
+              <span>View</span>
+            </Button>
+          </Link>
+          <Link to={`/legislation/${id}`}>
+            <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">
+              <MessageSquare size={16} className="mr-1" />
+              <span>Feedback</span>
+            </Button>
+          </Link>
         </div>
       </CardFooter>
     </Card>
