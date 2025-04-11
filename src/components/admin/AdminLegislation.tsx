@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -867,4 +868,206 @@ const AdminLegislation = () => {
                 <Label>Select Affected Areas</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border rounded-md p-3">
                   {indianLocations.map((location) => (
-                    <div key={location}
+                    <div key={location} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`create-location-${location}`} 
+                        onCheckedChange={(checked) => {
+                          const currentLocations = createForm.getValues("neighborhoods") || [];
+                          if (checked) {
+                            createForm.setValue("neighborhoods", [...currentLocations, location]);
+                          } else {
+                            createForm.setValue(
+                              "neighborhoods", 
+                              currentLocations.filter(loc => loc !== location)
+                            );
+                          }
+                        }}
+                      />
+                      <label 
+                        htmlFor={`create-location-${location}`}
+                        className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {location}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Upload Documents</Label>
+                <div className="border rounded-md p-3">
+                  <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-md">
+                    <label className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm font-medium">Click to upload files</span>
+                      <span className="text-xs text-muted-foreground">PDF, DOCX, XLSX, up to 10MB each</span>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        multiple 
+                        onChange={handleFileUpload}
+                        accept=".pdf,.docx,.xlsx,.csv,.txt"
+                      />
+                    </label>
+                  </div>
+                  
+                  {uploadedFiles.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium mb-2">Uploaded Files</h4>
+                      <ul className="space-y-2">
+                        {uploadedFiles.map((file, index) => (
+                          <li key={index} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                            <div className="flex items-center">
+                              <FileText size={14} className="mr-2 text-blue-600" />
+                              <span className="truncate max-w-[200px]">{file.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </span>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                onClick={() => handleRemoveFile(index)}
+                              >
+                                <X size={14} />
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Create Legislation</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this legislation? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="font-medium">{selectedLegislation?.title}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Status: {selectedLegislation?.status}
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteLegislation}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Upload Files Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Documents</DialogTitle>
+            <DialogDescription>
+              Add supporting documents to "{selectedLegislation?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-md">
+              <label className="flex flex-col items-center gap-2 cursor-pointer">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <span className="text-sm font-medium">Click to upload files</span>
+                <span className="text-xs text-muted-foreground">PDF, DOCX, XLSX, up to 10MB each</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  multiple 
+                  onChange={handleFileUpload}
+                  accept=".pdf,.docx,.xlsx,.csv,.txt"
+                />
+              </label>
+            </div>
+            
+            {uploadedFiles.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Uploaded Files</h4>
+                <ul className="space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <li key={index} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                      <div className="flex items-center">
+                        <FileText size={14} className="mr-2 text-blue-600" />
+                        <span className="truncate max-w-[200px]">{file.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6" 
+                          onClick={() => handleRemoveFile(index)}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsUploadDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUploadDocuments}
+              disabled={uploadedFiles.length === 0}
+            >
+              Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminLegislation;
