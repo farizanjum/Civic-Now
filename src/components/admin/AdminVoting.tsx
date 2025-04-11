@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,12 +34,11 @@ import {
   Trash2
 } from "lucide-react";
 
-// Mock data for active polls
 const INITIAL_ACTIVE_POLLS = [
   {
     id: "P1",
     title: "Community Center Improvement",
-    status: "active",
+    status: "active" as const,
     startDate: "2025-03-01",
     endDate: "2025-04-15",
     totalVotes: 256,
@@ -52,7 +50,7 @@ const INITIAL_ACTIVE_POLLS = [
   {
     id: "P2",
     title: "Park Amenities Selection",
-    status: "active",
+    status: "active" as const,
     startDate: "2025-03-10",
     endDate: "2025-04-30",
     totalVotes: 189,
@@ -65,7 +63,7 @@ const INITIAL_ACTIVE_POLLS = [
   {
     id: "P3",
     title: "Neighborhood Watch Program",
-    status: "ended",
+    status: "ended" as const,
     startDate: "2025-02-01",
     endDate: "2025-03-15",
     totalVotes: 312,
@@ -77,7 +75,7 @@ const INITIAL_ACTIVE_POLLS = [
   {
     id: "P4",
     title: "Library Hours Extension",
-    status: "draft",
+    status: "draft" as const,
     startDate: "2025-04-01",
     endDate: "2025-05-01",
     totalVotes: 0,
@@ -89,7 +87,6 @@ const INITIAL_ACTIVE_POLLS = [
   }
 ];
 
-// Mock voters data
 const mockVoters = [
   { id: "v1", name: "Alex Johnson", avatar: "/placeholder.svg", vote: "opt1" },
   { id: "v2", name: "Sarah Williams", avatar: "/placeholder.svg", vote: "opt2" },
@@ -98,10 +95,8 @@ const mockVoters = [
   { id: "v5", name: "David Wilson", avatar: "/placeholder.svg", vote: "opt1" },
 ];
 
-// Color array for pie chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-// Form schema for creating/editing polls
 const pollFormSchema = z.object({
   title: z.string().min(5, {
     message: "Title must be at least 5 characters.",
@@ -131,7 +126,6 @@ const pollFormSchema = z.object({
 
 type PollFormValues = z.infer<typeof pollFormSchema>;
 
-// Define poll type
 type Poll = {
   id: string;
   title: string;
@@ -173,7 +167,6 @@ const AdminVoting = () => {
     },
   });
   
-  // Filter polls based on tab and search term
   const filteredPolls = activePolls.filter(poll => {
     const matchesTab = 
       activeTab === "all" ||
@@ -221,7 +214,6 @@ const AdminVoting = () => {
   
   const onSubmit = (data: PollFormValues) => {
     if (isEditMode && selectedPoll) {
-      // Update existing poll
       const updatedPolls = activePolls.map(poll => 
         poll.id === selectedPoll.id 
           ? {
@@ -249,7 +241,6 @@ const AdminVoting = () => {
         description: "The poll has been successfully updated.",
       });
     } else {
-      // Create new poll
       const newPoll: Poll = {
         id: `P${activePolls.length + 1}`,
         title: data.title,
@@ -296,7 +287,7 @@ const AdminVoting = () => {
   const onEndPoll = (pollId: string) => {
     const updatedPolls = activePolls.map(poll => 
       poll.id === pollId 
-        ? { ...poll, status: "ended" }
+        ? { ...poll, status: "ended" as const }
         : poll
     );
     
@@ -314,7 +305,6 @@ const AdminVoting = () => {
   };
   
   const showVoters = (poll: Poll) => {
-    // Assign mock voters to selected poll
     const pollWithVoters = {
       ...poll,
       voters: [...mockVoters].sort(() => Math.random() - 0.5).slice(0, poll.totalVotes > 10 ? 10 : poll.totalVotes)
@@ -323,13 +313,11 @@ const AdminVoting = () => {
     setIsVotersDialogOpen(true);
   };
   
-  // Function to add an option field
   const addOption = () => {
     const currentOptions = form.getValues("options");
     form.setValue("options", [...currentOptions, { label: "" }]);
   };
   
-  // Function to remove an option field
   const removeOption = (index: number) => {
     const currentOptions = form.getValues("options");
     if (currentOptions.length <= 2) {
@@ -347,7 +335,6 @@ const AdminVoting = () => {
     );
   };
   
-  // Function to get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -361,7 +348,6 @@ const AdminVoting = () => {
     }
   };
   
-  // Function to get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
@@ -375,7 +361,6 @@ const AdminVoting = () => {
     }
   };
   
-  // Prepare chart data for the selected poll
   const prepareChartData = (poll: Poll) => {
     return poll.options.map((option, index) => ({
       name: option.label,
@@ -384,7 +369,6 @@ const AdminVoting = () => {
     }));
   };
   
-  // Custom pie chart label function
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
     const RADIAN = Math.PI / 180;
     const radius = 25 + innerRadius + (outerRadius - innerRadius);
@@ -405,7 +389,6 @@ const AdminVoting = () => {
     ) : null;
   };
 
-  // Custom tooltip component for better readability
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -550,7 +533,6 @@ const AdminVoting = () => {
         </CardContent>
       </Card>
       
-      {/* Create/Edit Poll Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -814,7 +796,6 @@ const AdminVoting = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Poll Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -850,7 +831,6 @@ const AdminVoting = () => {
         </DialogContent>
       </Dialog>
       
-      {/* View Results Dialog */}
       <Dialog open={isResultsDialogOpen} onOpenChange={setIsResultsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -955,7 +935,6 @@ const AdminVoting = () => {
         </DialogContent>
       </Dialog>
       
-      {/* View Voters Dialog */}
       <Dialog open={isVotersDialogOpen} onOpenChange={setIsVotersDialogOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>

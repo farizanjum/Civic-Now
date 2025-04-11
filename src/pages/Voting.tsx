@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThumbsUp, ThumbsDown, Minus, Users, Check, Clock, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import MainLayout from "@/layouts/MainLayout";
+import Layout from "@/components/layout/Layout";
 
 type VoteOption = {
   id: string;
@@ -57,7 +56,6 @@ type Voter = {
   vote: string;
 };
 
-// Mock voters data
 const mockVoters: Voter[] = [
   { id: "v1", name: "Alex Johnson", avatar: "/placeholder.svg", vote: "Option 1" },
   { id: "v2", name: "Sarah Williams", avatar: "/placeholder.svg", vote: "Option 2" },
@@ -71,19 +69,15 @@ const mockVoters: Voter[] = [
   { id: "v10", name: "Patricia Lee", avatar: "/placeholder.svg", vote: "Option 1" },
 ];
 
-// Function to distribute voters among options
 const distributeVoters = (options: VoteOption[], totalVoters: Voter[]): VoteOption[] => {
   const totalVotes = options.reduce((sum, option) => sum + option.votes, 0);
   
   return options.map(option => {
-    // Calculate how many voters should be assigned to this option
     const voterCount = Math.round((option.votes / totalVotes) * totalVoters.length);
-    // Assign voters randomly
     const optionVoters = totalVoters
       .slice(0, voterCount)
       .map(voter => ({...voter, vote: option.text}));
     
-    // Remove assigned voters from the pool
     totalVoters = totalVoters.slice(voterCount);
     
     return {...option, voters: optionVoters};
@@ -91,7 +85,6 @@ const distributeVoters = (options: VoteOption[], totalVoters: Voter[]): VoteOpti
 };
 
 const Voting = () => {
-  // States
   const [activeTab, setActiveTab] = useState<"polls" | "initiatives">("polls");
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [isVotersDialogOpen, setIsVotersDialogOpen] = useState(false);
@@ -101,7 +94,6 @@ const Voting = () => {
     voters: []
   });
   
-  // Initialize mock data
   const [polls, setPolls] = useState<Poll[]>([
     {
       id: "poll1",
@@ -220,18 +212,15 @@ const Voting = () => {
     }
   ]);
   
-  // Effect to distribute voters among poll options
   useEffect(() => {
-    // Distribute voters for polls
     const updatedPolls = polls.map(poll => {
-      const pollVoters = [...mockVoters]; // Create a copy to avoid modifying the original
+      const pollVoters = [...mockVoters];
       const updatedOptions = distributeVoters(poll.options, pollVoters);
       return {...poll, options: updatedOptions};
     });
     
     setPolls(updatedPolls);
     
-    // Distribute voters for initiatives
     const updatedInitiatives = initiatives.map(initiative => {
       const supportVoters = mockVoters.slice(0, Math.floor(mockVoters.length * (initiative.supportPercentage / 100))).map(voter => ({...voter, vote: "Support"}));
       const opposeVoters = mockVoters.slice(supportVoters.length, supportVoters.length + Math.floor(mockVoters.length * (initiative.opposePercentage / 100))).map(voter => ({...voter, vote: "Oppose"}));
@@ -243,12 +232,10 @@ const Voting = () => {
     setInitiatives(updatedInitiatives);
   }, []);
   
-  // Handle voting on a poll
   const handleVote = (pollId: string, optionId: string) => {
     setPolls(currentPolls => 
       currentPolls.map(poll => {
         if (poll.id === pollId) {
-          // Update vote counts
           const updatedOptions = poll.options.map(option => {
             if (option.id === optionId) {
               return { ...option, votes: option.votes + 1 };
@@ -256,7 +243,6 @@ const Voting = () => {
             return option;
           });
           
-          // Recalculate percentages
           const newTotalVotes = poll.totalVotes + 1;
           const optionsWithPercentages = updatedOptions.map(option => ({
             ...option,
@@ -281,28 +267,23 @@ const Voting = () => {
     });
   };
   
-  // Handle initiative support/oppose
   const handleSupportInitiative = (initiativeId: string, stance: "support" | "oppose" | "neutral") => {
     setInitiatives(current => 
       current.map(initiative => {
         if (initiative.id === initiativeId) {
-          // If user already supported/opposed, remove their previous stance
           const previousStance = initiative.userSupport;
           let newSupporters = initiative.supporters;
           let newOpposers = initiative.opposers;
           let newNeutral = initiative.neutral;
           
-          // Remove previous support if any
           if (previousStance === "support") newSupporters--;
           if (previousStance === "oppose") newOpposers--;
           if (previousStance === "neutral") newNeutral--;
           
-          // Add new support
           if (stance === "support") newSupporters++;
           if (stance === "oppose") newOpposers++;
           if (stance === "neutral") newNeutral++;
           
-          // Calculate new total and percentages
           const newTotal = newSupporters + newOpposers + newNeutral;
           
           return {
@@ -327,7 +308,6 @@ const Voting = () => {
     });
   };
   
-  // Show voters dialog
   const handleShowVoters = (id: string, title: string, voters: Voter[]) => {
     setViewingVoters({
       id,
@@ -364,7 +344,7 @@ const Voting = () => {
   };
 
   return (
-    <MainLayout>
+    <Layout>
       <div className="container py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">Community Voting</h1>
@@ -644,7 +624,6 @@ const Voting = () => {
         )}
       </div>
       
-      {/* Voters Dialog */}
       <Dialog open={isVotersDialogOpen} onOpenChange={setIsVotersDialogOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -681,7 +660,6 @@ const Voting = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Poll Detail Modal */}
       {selectedPoll && (
         <Dialog open={!!selectedPoll} onOpenChange={() => setSelectedPoll(null)}>
           <DialogContent className="max-w-2xl">
@@ -774,7 +752,7 @@ const Voting = () => {
           </DialogContent>
         </Dialog>
       )}
-    </MainLayout>
+    </Layout>
   );
 };
 
