@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { BookOpen, ThumbsUp, ThumbsDown, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, ThumbsUp, ThumbsDown, HelpCircle, RefreshCw } from 'lucide-react';
 import { 
   Card, 
   CardContent,
@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 interface LegislationSummaryProps {
   title: string;
@@ -36,12 +37,78 @@ interface LegislationSummaryProps {
 const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   title,
   originalText,
-  plainSummary,
+  plainSummary: initialPlainSummary,
   impacts,
   status,
   date,
   category
 }) => {
+  const [plainSummary, setPlainSummary] = useState(initialPlainSummary);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [apiKey, setApiKey] = useState<string>("");
+  
+  // Check for saved API key on component mount
+  useEffect(() => {
+    const savedApiKey = sessionStorage.getItem('mistral_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
+
+  const generateSummary = async () => {
+    if (!apiKey) {
+      const key = prompt("Please enter your Mistral AI API key:");
+      if (!key) {
+        toast.error("API key required to generate summary");
+        return;
+      }
+      sessionStorage.setItem('mistral_api_key', key);
+      setApiKey(key);
+    }
+    
+    setIsGenerating(true);
+    
+    try {
+      const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey || sessionStorage.getItem('mistral_api_key')}`
+        },
+        body: JSON.stringify({
+          model: "mistral-large-latest",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate."
+            },
+            {
+              role: "user",
+              content: `Please provide a plain language summary of the following legislative text in simple terms that any Indian citizen can understand:\n\n${originalText}`
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const generatedSummary = data.choices[0].message.content;
+      
+      setPlainSummary(generatedSummary);
+      toast.success("Summary generated successfully!");
+    } catch (error) {
+      console.error("Summary generation error:", error);
+      toast.error("Failed to generate summary. Please check your API key and try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Card className="shadow-md">
       <CardHeader className="bg-civic-blue/5 pb-4">
@@ -70,10 +137,26 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       
       <CardContent className="pt-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2 flex items-center">
-            <span className="bg-civic-blue text-white p-1 rounded-full mr-2 text-xs">TL;DR</span>
-            Plain Language Summary
-          </h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold flex items-center">
+              <span className="bg-civic-blue text-white p-1 rounded-full mr-2 text-xs">TL;DR</span>
+              Plain Language Summary
+            </h3>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={generateSummary}
+              disabled={isGenerating}
+              className="flex items-center text-xs"
+            >
+              {isGenerating ? (
+                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              {isGenerating ? "Generating..." : "Generate with AI"}
+            </Button>
+          </div>
           <p className="text-gray-700 text-base bg-amber-50 p-4 rounded-md border border-amber-100">
             {plainSummary}
           </p>

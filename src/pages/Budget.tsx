@@ -11,27 +11,27 @@ import NeighborhoodNotifications from "@/components/notifications/NeighborhoodNo
 import PlainLanguageSummary from "@/components/legislation/PlainLanguageSummary";
 import ImpactVisualization from "@/components/impact/ImpactVisualization";
 
-// Sample data for legislation summary
+// Sample data for legislation summary with Indian context
 const sampleLegislationData = {
   title: "Public Parks Maintenance Budget Allocation",
-  originalText: "WHEREAS, pursuant to Section 10(a) of the Municipal Parks Act, the City Council is authorized to allocate funds for the maintenance and improvement of public recreational spaces; and\n\nWHEREAS, the Department of Parks and Recreation has submitted a proposed budget of Rs. 2.5 crore for the fiscal year 2023-2024 for maintenance activities including landscaping, facility repairs, and safety improvements; and\n\nWHEREAS, the Finance Committee has reviewed the proposal and found it to be reasonable and necessary for the continued operation and improvement of the city's public parks;\n\nNOW, THEREFORE, BE IT RESOLVED by the City Council of Bengaluru that:\n\n1. The sum of Rs. 2.5 crore is hereby allocated from the general fund to the Department of Parks and Recreation for the maintenance and improvement of public parks for the fiscal year 2023-2024.\n\n2. The Director of Parks and Recreation shall submit quarterly reports to the City Council detailing the expenditure of these funds.\n\n3. Any unexpended funds at the end of the fiscal year shall be returned to the general fund unless otherwise authorized by the City Council.",
-  plainSummary: "This legislation approves Rs. 2.5 crore (25 million rupees) for maintaining and improving public parks in Bengaluru during 2023-2024. The money will be used for landscaping, repairs, and safety improvements. The Parks Department must report how they spend the money every three months, and any leftover funds must be returned at the end of the year unless the City Council allows them to keep it.",
+  originalText: "WHEREAS, pursuant to Section 10(a) of the Municipal Parks Act, the City Council of Bengaluru is authorized to allocate funds for the maintenance and improvement of public recreational spaces; and\n\nWHEREAS, the Department of Parks and Recreation has submitted a proposed budget of ₹2.5 crore for the fiscal year 2023-2024 for maintenance activities including landscaping, facility repairs, and safety improvements; and\n\nWHEREAS, the Finance Committee has reviewed the proposal and found it to be reasonable and necessary for the continued operation and improvement of the city's public parks;\n\nNOW, THEREFORE, BE IT RESOLVED by the City Council of Bengaluru that:\n\n1. The sum of ₹2.5 crore is hereby allocated from the general fund to the Department of Parks and Recreation for the maintenance and improvement of public parks for the fiscal year 2023-2024.\n\n2. The Director of Parks and Recreation shall submit quarterly reports to the BBMP (Bruhat Bengaluru Mahanagara Palike) detailing the expenditure of these funds.\n\n3. Any unexpended funds at the end of the fiscal year shall be returned to the general fund unless otherwise authorized by the City Council.",
+  plainSummary: "This legislation approves ₹2.5 crore (25 million rupees) for maintaining and improving public parks in Bengaluru during 2023-2024. The money will be used for landscaping, repairs, and safety improvements. The Parks Department must report how they spend the money every three months to the BBMP, and any leftover funds must be returned at the end of the year unless the City Council allows them to keep it.",
   impacts: {
     positive: [
       "Better maintained parks for recreation",
-      "Improved safety features for children",
-      "Enhanced green spaces throughout the city",
+      "Improved safety features for children at parks like Cubbon Park and Lalbagh",
+      "Enhanced green spaces throughout Bengaluru",
       "Potential increase in property values near parks"
     ],
     negative: [
       "Temporary park closures during improvements",
-      "Potential noise from maintenance work",
-      "Some funds diverted from other city services"
+      "Potential noise from maintenance work in residential areas like Indiranagar",
+      "Some funds diverted from other city services like road maintenance"
     ],
     uncertain: [
-      "Long-term sustainability of maintenance plans",
-      "Equal distribution of improvements across neighborhoods",
-      "Impact on water usage for landscaping during dry seasons"
+      "Long-term sustainability of maintenance plans during monsoon season",
+      "Equal distribution of improvements across neighborhoods in North and South Bengaluru",
+      "Impact on water usage for landscaping during dry seasons and water shortages"
     ]
   },
   status: "passed" as const,
