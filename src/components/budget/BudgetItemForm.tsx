@@ -5,12 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface Item {
+  name: string;
+  price: number;
+}
 
 interface ProcessedData {
   amount: number | null;
   date: string | null;
   merchant: string | null;
+  items?: Item[];
   rawText: string;
 }
 
@@ -24,7 +31,8 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
     amount: initialData.amount?.toString() || "",
     category: "",
     date: initialData.date || "",
-    notes: ""
+    notes: "",
+    items: initialData.items || []
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -34,6 +42,29 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
 
   const handleCategoryChange = (value: string) => {
     setFormData(prev => ({ ...prev, category: value }));
+  };
+
+  const handleItemChange = (index: number, field: keyof Item, value: string) => {
+    const updatedItems = [...formData.items];
+    if (field === 'name') {
+      updatedItems[index].name = value;
+    } else if (field === 'price') {
+      updatedItems[index].price = parseFloat(value) || 0;
+    }
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+  };
+
+  const addItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { name: "", price: 0 }]
+    }));
+  };
+
+  const removeItem = (index: number) => {
+    const updatedItems = [...formData.items];
+    updatedItems.splice(index, 1);
+    setFormData(prev => ({ ...prev, items: updatedItems }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,12 +85,17 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
       amount: "",
       category: "",
       date: "",
-      notes: ""
+      notes: "",
+      items: []
     });
   };
 
+  const calculateTotal = (): number => {
+    return formData.items.reduce((sum, item) => sum + item.price, 0);
+  };
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="title">Title/Merchant</Label>
@@ -73,18 +109,32 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
           />
         </div>
         
-        <div className="grid gap-2">
-          <Label htmlFor="amount">Amount ($)</Label>
-          <Input 
-            id="amount"
-            name="amount"
-            value={formData.amount}
-            onChange={handleChange}
-            placeholder="0.00"
-            type="number"
-            step="0.01"
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="amount">Total Amount ($)</Label>
+            <Input 
+              id="amount"
+              name="amount"
+              value={formData.amount}
+              onChange={handleChange}
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              required
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="date">Date</Label>
+            <Input 
+              id="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              type="date"
+              required
+            />
+          </div>
         </div>
         
         <div className="grid gap-2">
@@ -104,16 +154,77 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
           </Select>
         </div>
         
-        <div className="grid gap-2">
-          <Label htmlFor="date">Date</Label>
-          <Input 
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            type="date"
-            required
-          />
+        {/* Items Section */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <Label>Line Items</Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={addItem}
+              className="flex items-center"
+            >
+              <Plus size={16} className="mr-1" /> Add Item
+            </Button>
+          </div>
+          
+          {formData.items.length > 0 ? (
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60%]">Item Description</TableHead>
+                    <TableHead className="w-[30%]">Price ($)</TableHead>
+                    <TableHead className="w-[10%]">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {formData.items.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Input
+                          value={item.name}
+                          onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                          placeholder="Item description"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.price}
+                          onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => removeItem(index)}
+                        >
+                          <Trash2 size={16} className="text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Total Row */}
+                  <TableRow>
+                    <TableCell className="font-bold">Total</TableCell>
+                    <TableCell className="font-bold">${calculateTotal().toFixed(2)}</TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-6 border border-dashed rounded-md text-civic-gray">
+              No items added yet
+            </div>
+          )}
         </div>
         
         <div className="grid gap-2">
@@ -127,7 +238,7 @@ export const BudgetItemForm = ({ initialData }: BudgetItemFormProps) => {
           />
         </div>
         
-        <Button type="submit" className="mt-2 bg-civic-blue hover:bg-civic-blue-dark">
+        <Button type="submit" className="mt-4 bg-civic-blue hover:bg-civic-blue-dark">
           <Check size={16} className="mr-2" />
           Save Budget Item
         </Button>

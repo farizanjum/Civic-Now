@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Check, FileText, Loader2 } from "lucide-react";
+import { UploadCloud, X, Check, FileText, Loader2, LockKeyhole } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { BudgetItemForm } from "./BudgetItemForm";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ProcessedData {
   amount: number | null;
   date: string | null;
   merchant: string | null;
+  items?: Array<{ name: string; price: number }>;
   rawText: string;
 }
 
@@ -22,6 +24,8 @@ const BudgetOcrUploader = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,30 +76,100 @@ const BudgetOcrUploader = () => {
     }
   };
 
-  const handleProcessImage = () => {
-    if (!file) return;
+  const handleProcessImage = async () => {
+    if (!file) {
+      toast({
+        title: "No File Selected",
+        description: "Please upload a receipt image first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!apiKey) {
+      setShowApiKeyDialog(true);
+      return;
+    }
     
     setProcessing(true);
     
-    // Simulate OCR processing
-    setTimeout(() => {
-      // Mocked OCR response
-      const mockData: ProcessedData = {
-        amount: 125.67,
-        date: "2025-04-10",
-        merchant: "City Hardware Store",
-        rawText: "RECEIPT\nCity Hardware Store\n123 Main St\nDate: 04/10/2025\nItem 1: $45.99\nItem 2: $79.68\nTax: $8.99\nTotal: $125.67\nThank you for shopping with us!"
+    try {
+      // Create form data for the API request
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      
+      // Send request to our FastAPI backend
+      const response = await fetch('http://localhost:8000/ocr', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to process receipt');
+      }
+      
+      const data = await response.json();
+      
+      // Format the data to match our expected format
+      const formattedData: ProcessedData = {
+        merchant: data.merchant,
+        date: data.date,
+        amount: data.amount,
+        items: data.items || [],
+        rawText: data.raw_text
       };
       
-      setProcessedData(mockData);
-      setProcessing(false);
+      setProcessedData(formattedData);
       
       toast({
         title: "Receipt Processed",
         description: "We've extracted the information from your receipt.",
       });
-    }, 2000);
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      toast({
+        title: "Processing Failed",
+        description: error instanceof Error ? error.message : "An error occurred during processing",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+    }
   };
+
+  const handleSaveApiKey = () => {
+    if (apiKey) {
+      // Store API key in sessionStorage (it will be cleared when the browser is closed)
+      // This is more secure than localStorage for sensitive data
+      sessionStorage.setItem('mistral_api_key', apiKey);
+      setShowApiKeyDialog(false);
+      toast({
+        title: "API Key Saved",
+        description: "Your API key is saved for this session only.",
+      });
+      
+      // Process the image if a file is selected
+      if (file) {
+        handleProcessImage();
+      }
+    } else {
+      toast({
+        title: "API Key Required",
+        description: "Please enter a valid API key.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check for saved API key on component mount
+  useState(() => {
+    const savedApiKey = sessionStorage.getItem('mistral_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -205,6 +279,43 @@ const BudgetOcrUploader = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* API Key Dialog */}
+      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Mistral AI API Key</DialogTitle>
+            <DialogDescription>
+              Your API key is required to process the receipt. It will be stored only for this session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="api-key" className="mb-2 block">API Key</Label>
+            <div className="flex items-center space-x-2">
+              <LockKeyhole size={16} className="text-civic-gray" />
+              <Input 
+                id="api-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your Mistral AI API key"
+                className="flex-1"
+              />
+            </div>
+            <p className="mt-2 text-xs text-civic-gray">
+              Your API key is never stored on our server and is only used to make requests to Mistral AI.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveApiKey} className="bg-civic-blue hover:bg-civic-blue-dark">
+              Save & Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
