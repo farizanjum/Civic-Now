@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,8 +17,20 @@ import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Define legislation type to ensure type safety
+type LegislationItem = {
+  id: string;
+  title: string;
+  status: string;
+  author: string;
+  dateCreated: string;
+  lastUpdated: string;
+  datePublished?: string;
+  dateArchived?: string;
+};
+
 // Mock data for legislation
-const mockLegislation = [
+const mockLegislation: LegislationItem[] = [
   {
     id: "L1",
     title: "Community Park Expansion Proposal",
@@ -108,13 +119,13 @@ const AdminLegislation = () => {
   const [activeTab, setActiveTab] = useState("drafts");
   const [statusFilter, setStatusFilter] = useState("all_status");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLegislation, setSelectedLegislation] = useState<any>(null);
+  const [selectedLegislation, setSelectedLegislation] = useState<LegislationItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [legislationList, setLegislationList] = useState(mockLegislation);
+  const [legislationList, setLegislationList] = useState<LegislationItem[]>(mockLegislation);
   const [isEditing, setIsEditing] = useState(false);
   
   // Create legislation form
@@ -213,7 +224,7 @@ const AdminLegislation = () => {
   
   // Handle creating new legislation
   const handleCreateLegislation = (data: any) => {
-    const newLegislation = {
+    const newLegislation: LegislationItem = {
       id: `L${legislationList.length + 1}`,
       title: data.title,
       status: data.status,
@@ -235,6 +246,8 @@ const AdminLegislation = () => {
 
   // Handle editing legislation
   const handleEditLegislation = (data: any) => {
+    if (!selectedLegislation) return;
+    
     setLegislationList(prev => 
       prev.map(item => 
         item.id === selectedLegislation.id
@@ -252,6 +265,8 @@ const AdminLegislation = () => {
 
   // Handle deleting legislation
   const handleDeleteLegislation = () => {
+    if (!selectedLegislation) return;
+    
     setLegislationList(prev => prev.filter(item => item.id !== selectedLegislation.id));
     setIsDeleteDialogOpen(false);
     setIsDialogOpen(false);
@@ -261,7 +276,7 @@ const AdminLegislation = () => {
     });
   };
   
-  const handleActionClick = (action: string, legislation: any) => {
+  const handleActionClick = (action: string, legislation: LegislationItem) => {
     setSelectedLegislation(legislation);
     
     switch (action) {
@@ -280,7 +295,12 @@ const AdminLegislation = () => {
         setLegislationList(prev => 
           prev.map(item => 
             item.id === legislation.id
-              ? { ...item, status: "Published", lastUpdated: new Date().toISOString().split('T')[0], datePublished: new Date().toISOString().split('T')[0] }
+              ? { 
+                  ...item, 
+                  status: "Published", 
+                  lastUpdated: new Date().toISOString().split('T')[0], 
+                  datePublished: new Date().toISOString().split('T')[0] 
+                }
               : item
           )
         );
@@ -293,7 +313,12 @@ const AdminLegislation = () => {
         setLegislationList(prev => 
           prev.map(item => 
             item.id === legislation.id
-              ? { ...item, status: "Archived", lastUpdated: new Date().toISOString().split('T')[0], dateArchived: new Date().toISOString().split('T')[0] }
+              ? { 
+                  ...item, 
+                  status: "Archived", 
+                  lastUpdated: new Date().toISOString().split('T')[0], 
+                  dateArchived: new Date().toISOString().split('T')[0] 
+                }
               : item
           )
         );
@@ -319,7 +344,7 @@ const AdminLegislation = () => {
     setUploadedFiles([]);
     toast({
       title: "Documents Uploaded",
-      description: `${uploadedFiles.length} document(s) uploaded for "${selectedLegislation.title}".`,
+      description: `${uploadedFiles.length} document(s) uploaded for "${selectedLegislation?.title}".`,
     });
   };
 
@@ -842,248 +867,4 @@ const AdminLegislation = () => {
                 <Label>Select Affected Areas</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border rounded-md p-3">
                   {indianLocations.map((location) => (
-                    <div key={location} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`create-location-${location}`} 
-                        onCheckedChange={(checked) => {
-                          const currentLocations = createForm.getValues("neighborhoods") || [];
-                          if (checked) {
-                            createForm.setValue("neighborhoods", [...currentLocations, location]);
-                          } else {
-                            createForm.setValue(
-                              "neighborhoods", 
-                              currentLocations.filter(loc => loc !== location)
-                            );
-                          }
-                        }}
-                      />
-                      <label 
-                        htmlFor={`create-location-${location}`}
-                        className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {location}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="create-fullText">Full Text</Label>
-                <Textarea 
-                  id="create-fullText" 
-                  placeholder="Enter the full text of the legislation"
-                  rows={6}
-                  {...createForm.register("fullText")}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label>Attachments</Label>
-                  <label 
-                    htmlFor="file-upload" 
-                    className="text-sm text-blue-600 cursor-pointer hover:underline"
-                  >
-                    + Add Files
-                  </label>
-                  <input 
-                    id="file-upload" 
-                    type="file" 
-                    className="hidden" 
-                    multiple 
-                    onChange={handleFileUpload}
-                  />
-                </div>
-                {uploadedFiles.length > 0 ? (
-                  <div className="border rounded-md p-3">
-                    <ul className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <li key={index} className="text-sm flex items-center justify-between">
-                          <div className="flex items-center">
-                            <FileText size={14} className="mr-2 text-blue-600" />
-                            <span>{file.name}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-xs text-muted-foreground mr-2">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </span>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => handleRemoveFile(index)}
-                            >
-                              <X size={14} />
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <div className="border border-dashed rounded-md p-6 text-center">
-                    <Upload size={24} className="mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Drag and drop files here or{" "}
-                      <label 
-                        htmlFor="file-upload-alt" 
-                        className="text-blue-600 cursor-pointer hover:underline"
-                      >
-                        browse
-                      </label>
-                    </p>
-                    <input 
-                      id="file-upload-alt" 
-                      type="file" 
-                      className="hidden" 
-                      multiple 
-                      onChange={handleFileUpload}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsCreateDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Create Legislation</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this legislation? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="font-medium">{selectedLegislation?.title}</p>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteLegislation}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upload Documents Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Upload Documents</DialogTitle>
-            <DialogDescription>
-              Add supporting documents to "{selectedLegislation?.title}"
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label>Attachments</Label>
-                <label 
-                  htmlFor="upload-dialog-file" 
-                  className="text-sm text-blue-600 cursor-pointer hover:underline"
-                >
-                  + Add Files
-                </label>
-                <input 
-                  id="upload-dialog-file" 
-                  type="file" 
-                  className="hidden" 
-                  multiple 
-                  onChange={handleFileUpload}
-                />
-              </div>
-              {uploadedFiles.length > 0 ? (
-                <div className="border rounded-md p-3">
-                  <ul className="space-y-2">
-                    {uploadedFiles.map((file, index) => (
-                      <li key={index} className="text-sm flex items-center justify-between">
-                        <div className="flex items-center">
-                          <FileText size={14} className="mr-2 text-blue-600" />
-                          <span>{file.name}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="text-xs text-muted-foreground mr-2">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => handleRemoveFile(index)}
-                          >
-                            <X size={14} />
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="border border-dashed rounded-md p-6 text-center">
-                  <Upload size={24} className="mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Drag and drop files here or{" "}
-                    <label 
-                      htmlFor="upload-dialog-file-alt" 
-                      className="text-blue-600 cursor-pointer hover:underline"
-                    >
-                      browse
-                    </label>
-                  </p>
-                  <input 
-                    id="upload-dialog-file-alt" 
-                    type="file" 
-                    className="hidden" 
-                    multiple 
-                    onChange={handleFileUpload}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsUploadDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              disabled={uploadedFiles.length === 0}
-              onClick={handleUploadDocuments}
-            >
-              <Upload size={14} className="mr-2" /> Upload
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default AdminLegislation;
+                    <div key={location}
