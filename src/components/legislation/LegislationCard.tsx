@@ -25,7 +25,6 @@ const LegislationCard = ({
   date,
   category,
   neighborhoods,
-  commentCount,
   onFeedbackClick
 }: LegislationCardProps) => {
   // Map status to color

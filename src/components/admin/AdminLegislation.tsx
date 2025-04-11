@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +16,6 @@ import * as z from "zod";
 import { Search, Plus, Edit, Trash2, Eye, X, Check, Filter, Download, FileDown, FileUp, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Define type for legislation items
 type LegislationItem = {
   id: string;
   title: string;
@@ -29,7 +27,6 @@ type LegislationItem = {
   dateArchived?: string;
 };
 
-// Schema for legislation form
 const legislationFormSchema = z.object({
   title: z.string().min(5, {
     message: "Title must be at least 5 characters.",
@@ -68,7 +65,6 @@ const AdminLegislation = () => {
     dateTo: "",
   });
 
-  // Initialize form
   const form = useForm<LegislationFormValues>({
     resolver: zodResolver(legislationFormSchema),
     defaultValues: {
@@ -81,7 +77,6 @@ const AdminLegislation = () => {
     },
   });
 
-  // Sample data for legislation items
   const [legislationList, setLegislationList] = useState<LegislationItem[]>([
     {
       id: "leg-001",
@@ -137,14 +132,12 @@ const AdminLegislation = () => {
     },
   ]);
 
-  // Filter legislation based on tab and search term
   const filteredLegislation = legislationList.filter(leg => {
     const matchesTab = activeTab === "all" || leg.status === activeTab;
     const matchesSearch = leg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          leg.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          leg.id.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Additional filters
     const matchesAuthor = !filterOptions.author || leg.author.toLowerCase().includes(filterOptions.author.toLowerCase());
     const matchesDateFrom = !filterOptions.dateFrom || new Date(leg.dateCreated) >= new Date(filterOptions.dateFrom);
     const matchesDateTo = !filterOptions.dateTo || new Date(leg.dateCreated) <= new Date(filterOptions.dateTo);
@@ -152,9 +145,7 @@ const AdminLegislation = () => {
     return matchesTab && matchesSearch && matchesAuthor && matchesDateFrom && matchesDateTo;
   });
 
-  // Function to handle form submission for new legislation
   const onSubmit = (data: LegislationFormValues) => {
-    // If editing existing legislation
     if (selectedLegislation) {
       const updatedList = legislationList.map(item => 
         item.id === selectedLegislation.id 
@@ -174,7 +165,6 @@ const AdminLegislation = () => {
         description: "The legislation has been successfully updated.",
       });
     } else {
-      // Creating new legislation
       const newLegislation: LegislationItem = {
         id: `leg-${String(legislationList.length + 1).padStart(3, '0')}`,
         title: data.title,
@@ -184,7 +174,6 @@ const AdminLegislation = () => {
         lastUpdated: new Date().toISOString().split('T')[0],
       };
 
-      // Add published date if status is published
       if (data.status === "published") {
         newLegislation.datePublished = new Date().toISOString().split('T')[0];
       }
@@ -197,18 +186,15 @@ const AdminLegislation = () => {
       });
     }
     
-    // Reset and close
     form.reset();
     setSelectedLegislation(null);
     setIsNewLegislationDialogOpen(false);
   };
 
-  // Function to handle filter toggle
   const handleFilterToggle = () => {
     setShowFilters(!showFilters);
   };
 
-  // Function to handle export
   const handleExport = () => {
     toast({
       title: "Export Successful",
@@ -216,7 +202,6 @@ const AdminLegislation = () => {
     });
   };
 
-  // Function to handle import
   const handleImport = () => {
     toast({
       title: "Import Successful",
@@ -224,7 +209,6 @@ const AdminLegislation = () => {
     });
   };
 
-  // Function to handle delete confirmation
   const handleDelete = () => {
     if (!deleteId) return;
     
@@ -240,11 +224,9 @@ const AdminLegislation = () => {
     setIsDeleteDialogOpen(false);
   };
 
-  // Function to open edit dialog
   const handleEdit = (legislation: LegislationItem) => {
     setSelectedLegislation(legislation);
     
-    // Set form values
     form.setValue("title", legislation.title);
     form.setValue("status", legislation.status);
     form.setValue("summary", "Sample summary for " + legislation.title);
@@ -255,7 +237,6 @@ const AdminLegislation = () => {
     setIsNewLegislationDialogOpen(true);
   };
 
-  // Function to handle status change
   const handleStatusChange = (id: string, newStatus: string) => {
     const updatedList = legislationList.map(item => {
       if (item.id === id) {
@@ -265,12 +246,10 @@ const AdminLegislation = () => {
           lastUpdated: new Date().toISOString().split('T')[0]
         };
         
-        // Add published date if new status is published
         if (newStatus === "published" && !item.datePublished) {
           updated.datePublished = new Date().toISOString().split('T')[0];
         }
         
-        // Add archived date if new status is archived
         if (newStatus === "archived" && !item.dateArchived) {
           updated.dateArchived = new Date().toISOString().split('T')[0];
         }
@@ -288,7 +267,6 @@ const AdminLegislation = () => {
     });
   };
 
-  // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
@@ -371,7 +349,6 @@ const AdminLegislation = () => {
               </div>
             </div>
 
-            {/* Filter options */}
             {showFilters && (
               <div className="p-4 border rounded-md bg-muted/40 space-y-4">
                 <h4 className="font-medium">Advanced Filters</h4>
@@ -422,7 +399,7 @@ const AdminLegislation = () => {
             )}
 
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 overflow-x-auto flex w-full md:w-auto whitespace-nowrap">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="draft">Drafts</TabsTrigger>
                 <TabsTrigger value="review">In Review</TabsTrigger>
@@ -432,16 +409,16 @@ const AdminLegislation = () => {
               
               <TabsContent value={activeTab} className="m-0">
                 {filteredLegislation.length > 0 ? (
-                  <div className={`border rounded-md ${isMobile ? "overflow-auto" : ""}`}>
+                  <div className="border rounded-md overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>ID</TableHead>
+                          <TableHead className="w-[80px]">ID</TableHead>
                           <TableHead>Title</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Author</TableHead>
-                          <TableHead>Created</TableHead>
-                          <TableHead>Updated</TableHead>
+                          <TableHead className="hidden md:table-cell">Author</TableHead>
+                          <TableHead className="hidden md:table-cell">Created</TableHead>
+                          <TableHead className="hidden md:table-cell">Updated</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -449,17 +426,17 @@ const AdminLegislation = () => {
                         {filteredLegislation.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                            <TableCell className="font-medium">{item.title}</TableCell>
+                            <TableCell className="font-medium max-w-[200px] truncate">{item.title}</TableCell>
                             <TableCell>
                               <Badge className={getStatusColor(item.status)}>
                                 {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                               </Badge>
                             </TableCell>
-                            <TableCell>{item.author}</TableCell>
-                            <TableCell className="text-muted-foreground">{item.dateCreated}</TableCell>
-                            <TableCell className="text-muted-foreground">{item.lastUpdated}</TableCell>
+                            <TableCell className="hidden md:table-cell">{item.author}</TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground">{item.dateCreated}</TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground">{item.lastUpdated}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 md:gap-2">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -528,6 +505,7 @@ const AdminLegislation = () => {
                       onClick={() => {
                         setSearchTerm("");
                         setActiveTab("all");
+                        setFilterOptions({ author: "", dateFrom: "", dateTo: "" });
                       }}
                     >
                       Reset Filters
@@ -540,9 +518,8 @@ const AdminLegislation = () => {
         </CardContent>
       </Card>
 
-      {/* New Legislation Dialog */}
       <Dialog open={isNewLegislationDialogOpen} onOpenChange={setIsNewLegislationDialogOpen}>
-        <DialogContent className={`${isMobile ? "max-w-full h-full" : "max-w-3xl"}`}>
+        <DialogContent className={`${isMobile ? "max-w-full h-[95svh] overflow-y-auto" : "max-w-3xl"}`}>
           <DialogHeader>
             <DialogTitle>{selectedLegislation ? "Edit Legislation" : "Create New Legislation"}</DialogTitle>
             <DialogDescription>
@@ -553,7 +530,7 @@ const AdminLegislation = () => {
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <div className="grid gap-5 py-4">
                 <FormField
                   control={form.control}
@@ -685,7 +662,7 @@ const AdminLegislation = () => {
                 />
               </div>
               
-              <DialogFooter className="mt-6">
+              <DialogFooter className="mt-6 flex justify-between sm:justify-end gap-2">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -697,8 +674,8 @@ const AdminLegislation = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="ml-2">
-                  {selectedLegislation ? "Update Legislation" : "Create Legislation"}
+                <Button type="submit">
+                  {selectedLegislation ? "Update Legislation" : "Save Legislation"}
                 </Button>
               </DialogFooter>
             </form>
@@ -706,7 +683,6 @@ const AdminLegislation = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -715,7 +691,7 @@ const AdminLegislation = () => {
               Are you sure you want to delete this legislation? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>

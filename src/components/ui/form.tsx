@@ -40,6 +40,16 @@ const FormField = <
   )
 }
 
+type FieldState = {
+  invalid: boolean;
+  isDirty: boolean;
+  isTouched: boolean;
+  error?: {
+    message?: string;
+    type?: string;
+  };
+}
+
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
@@ -51,7 +61,7 @@ const useFormField = () => {
   const formContext = useFormContext();
   
   // Create a default empty fieldState with all expected properties
-  const defaultFieldState = {
+  const defaultFieldState: FieldState = {
     invalid: false,
     isDirty: false,
     isTouched: false,
