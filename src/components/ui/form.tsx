@@ -48,10 +48,20 @@ const useFormField = () => {
     throw new Error("useFormField should be used within <FormField>")
   }
 
-  const { getFieldState, formState } = useFormContext() || {};
+  const formContext = useFormContext();
   
-  // Add a null check before trying to access getFieldState
-  const fieldState = getFieldState ? getFieldState(fieldContext.name, formState) : {};
+  // Create a default empty fieldState with all expected properties
+  const defaultFieldState = {
+    invalid: false,
+    isDirty: false,
+    isTouched: false,
+    error: undefined
+  };
+  
+  // Get fieldState if available, otherwise use the default
+  const fieldState = formContext?.getFieldState
+    ? formContext.getFieldState(fieldContext.name, formContext.formState)
+    : defaultFieldState;
 
   const { id } = itemContext || {};
 
