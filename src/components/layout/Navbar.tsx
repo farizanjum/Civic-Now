@@ -27,8 +27,8 @@ const Navbar = () => {
             <Link to="/legislation" className="nav-link">Legislation</Link>
             <Link to="/voting" className="nav-link">Community Voting</Link>
             <Link to="/initiatives" className="nav-link">Initiatives</Link>
-            <Link to="/impact" className="nav-link">Impact</Link>
             <Link to="/budget" className="nav-link">Budget Tracking</Link>
+            <Link to="/feedback" className="nav-link">Feedback</Link>
           </div>
 
           {/* Auth Buttons - Desktop */}
@@ -42,8 +42,8 @@ const Navbar = () => {
                 <span>Sign In</span>
               </Button>
             </Link>
-            <Link to="/signup">
-              <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Get Started</Button>
+            <Link to="/admin">
+              <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Admin Panel</Button>
             </Link>
           </div>
 
@@ -68,11 +68,14 @@ const Navbar = () => {
               <Link to="/initiatives" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
                 Initiatives
               </Link>
-              <Link to="/impact" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
-                Impact
-              </Link>
               <Link to="/budget" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
                 Budget Tracking
+              </Link>
+              <Link to="/feedback" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
+                Feedback
+              </Link>
+              <Link to="/admin" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
+                Admin Panel
               </Link>
               <hr className="border-border" />
               <div className="flex space-x-2 pt-2">

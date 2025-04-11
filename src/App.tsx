@@ -13,6 +13,8 @@ import LegislationDetail from "./pages/LegislationDetail";
 import Voting from "./pages/Voting";
 import Budget from "./pages/Budget";
 import Feedback from "./pages/Feedback";
+import Initiatives from "./pages/Initiatives";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/voting" element={<Voting />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/initiatives" element={<Initiatives />} />
+            <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
