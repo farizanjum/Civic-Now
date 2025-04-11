@@ -50,6 +50,23 @@ Process a receipt image and extract structured data.
 }
 ```
 
+## Frontend Integration
+
+The OCR API is designed to work with the Budget page of the CivicNow application, which provides:
+
+1. A user-friendly upload interface
+2. Secure API key handling (never stored on server)
+3. Structured display of extracted receipt data
+4. Integration with the budget tracking system
+
+## Community Features
+
+The application also includes:
+
+1. **Neighborhood Notifications**: Real-time alerts about issues affecting specific neighborhoods
+2. **Plain Language Summaries**: Simple explanations of proposed local legislation
+3. **Impact Visualization**: Tools showing how policies affect different community segments
+
 ## Security Considerations
 
 - The API key is never stored on the server; it's only used for the current request to the Mistral AI API.
