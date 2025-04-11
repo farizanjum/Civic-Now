@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,8 @@ import PlainLanguageSummary from "@/components/legislation/PlainLanguageSummary"
 import ImpactVisualization from "@/components/impact/ImpactVisualization";
 import BudgetOcrUploader from "@/components/budget/BudgetOcrUploader";
 import BudgetSummary from "@/components/budget/BudgetSummary";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BudgetItemForm } from "@/components/budget/BudgetItemForm";
 
 // Sample data for legislation summary with Indian context
 const sampleLegislationData = {
@@ -39,7 +40,23 @@ const sampleLegislationData = {
   category: "Budget Allocation"
 };
 
+interface OcrResponse {
+  merchant: string;
+  date: string;
+  amount: number;
+  items: Array<{ name: string; price: number }>;
+  raw_text: string;
+}
+
 const Budget = () => {
+  const [processedReceipt, setProcessedReceipt] = useState<OcrResponse | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleReceiptProcessed = (data: OcrResponse) => {
+    setProcessedReceipt(data);
+    setIsDialogOpen(true);
+  };
+
   return (
     <Layout>
       <div className="civic-container py-8">
@@ -72,7 +89,7 @@ const Budget = () => {
                   </TabsList>
                   
                   <TabsContent value="upload" className="pt-6">
-                    <BudgetOcrUploader />
+                    <BudgetOcrUploader onReceiptProcessed={handleReceiptProcessed} />
                   </TabsContent>
                   
                   <TabsContent value="summary" className="pt-6">
@@ -135,6 +152,26 @@ const Budget = () => {
             </Card>
           </div>
         </div>
+        
+        {/* Dialog for displaying the form after receipt processing */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Budget Item</DialogTitle>
+            </DialogHeader>
+            {processedReceipt && (
+              <BudgetItemForm 
+                initialData={{
+                  amount: processedReceipt.amount,
+                  date: processedReceipt.date,
+                  merchant: processedReceipt.merchant,
+                  items: processedReceipt.items,
+                  rawText: processedReceipt.raw_text
+                }} 
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
