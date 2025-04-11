@@ -1,393 +1,464 @@
-
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Filter, Search, FilePlus, FileText, Check, Clock, AlertTriangle, MoreHorizontal } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Search, Filter, MoreHorizontal, Plus, FilePenLine, Trash2, Check, X } from "lucide-react";
 
 // Mock data for legislation
-const legislationData = [
+const mockLegislation = [
   {
-    id: "L123",
-    title: "Urban Green Space Expansion Act",
-    status: "Active",
-    category: "Environment",
-    dateSubmitted: "2025-02-15",
-    summary: "Proposal to increase green spaces in urban areas by 15% over the next 5 years.",
-    votes: { for: 125, against: 45 },
+    id: "L1",
+    title: "Community Park Expansion Proposal",
+    status: "In Progress",
+    author: "Council Member Johnson",
+    dateCreated: "2025-03-15",
+    lastUpdated: "2025-04-01",
   },
   {
-    id: "L124",
-    title: "Public Transportation Improvement Bill",
-    status: "Draft",
-    category: "Infrastructure",
-    dateSubmitted: "2025-03-01",
-    summary: "Plan to upgrade public transit systems and improve accessibility across the city.",
-    votes: { for: 0, against: 0 },
+    id: "L2",
+    title: "Residential Zoning Amendment",
+    status: "Review",
+    author: "Urban Planning Department",
+    dateCreated: "2025-03-10",
+    lastUpdated: "2025-03-28",
   },
   {
-    id: "L125",
-    title: "Community Safety Initiative",
-    status: "Under Review",
-    category: "Safety",
-    dateSubmitted: "2025-03-10",
-    summary: "Comprehensive plan to enhance community safety through increased patrols and neighborhood watch programs.",
-    votes: { for: 78, against: 23 },
+    id: "L3",
+    title: "Public Transportation Funding Initiative",
+    status: "Approved",
+    author: "Transportation Committee",
+    dateCreated: "2025-02-20",
+    lastUpdated: "2025-03-25",
   },
   {
-    id: "L126",
-    title: "Local Business Support Program",
-    status: "Active",
-    category: "Economy",
-    dateSubmitted: "2025-02-28",
-    summary: "Program to provide grants and resources to local small businesses affected by economic challenges.",
-    votes: { for: 218, against: 32 },
+    id: "L4",
+    title: "Small Business Support Program",
+    status: "Published",
+    author: "Economic Development Office",
+    dateCreated: "2025-02-05",
+    lastUpdated: "2025-03-15",
+    datePublished: "2025-03-15",
   },
   {
-    id: "L127",
-    title: "Educational Resources Modernization",
-    status: "Completed",
-    category: "Education",
-    dateSubmitted: "2025-01-20",
-    summary: "Initiative to update educational resources and technology in public schools to enhance learning outcomes.",
-    votes: { for: 189, against: 56 },
+    id: "L5",
+    title: "Historic District Preservation Guidelines",
+    status: "Published",
+    author: "Heritage Preservation Board",
+    dateCreated: "2025-01-20",
+    lastUpdated: "2025-02-28",
+    datePublished: "2025-02-28",
+  },
+  {
+    id: "L6",
+    title: "Annual Budget Allocation 2024-2025",
+    status: "Archived",
+    author: "Finance Department",
+    dateCreated: "2024-11-10",
+    lastUpdated: "2025-01-15",
+    datePublished: "2025-01-15",
+    dateArchived: "2025-03-30",
   },
 ];
 
-const formSchema = z.object({
-  title: z.string().min(10, "Title must be at least 10 characters.").max(100, "Title must be less than 100 characters."),
-  category: z.string().min(1, "Please select a category."),
-  summary: z.string().min(50, "Summary must be at least 50 characters.").max(500, "Summary must be less than 500 characters."),
-  fullText: z.string().min(100, "Full text must be at least 100 characters."),
-  sponsors: z.string().optional(),
-  effectiveDate: z.date().optional(),
-});
-
 const AdminLegislation = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("drafts");
   const [statusFilter, setStatusFilter] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLegislation, setSelectedLegislation] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      category: "",
-      summary: "",
-      fullText: "",
-      sponsors: "",
-    },
-  });
-  
-  // Filter legislation based on search term and status
-  const filteredLegislation = legislationData.filter((item) => {
-    return (
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (statusFilter === "" || item.status === statusFilter)
-    );
+  // Filter legislation based on active tab, search term, and status filter
+  const filteredLegislation = mockLegislation.filter((item) => {
+    // Filter by tab
+    if (activeTab === "drafts" && (item.status === "In Progress" || item.status === "Review" || item.status === "Approved")) {
+      // Filter by search and status
+      return (
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+      );
+    } else if (activeTab === "published" && item.status === "Published") {
+      return (
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+      );
+    } else if (activeTab === "archived" && item.status === "Archived") {
+      return (
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === "" || statusFilter === "all_status" || item.status === statusFilter)
+      );
+    }
+    return false;
   });
   
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800";
-      case "Draft":
-        return "bg-gray-100 text-gray-800";
-      case "Under Review":
-        return "bg-yellow-100 text-yellow-800";
-      case "Completed":
+      case "In Progress":
         return "bg-blue-100 text-blue-800";
+      case "Review":
+        return "bg-yellow-100 text-yellow-800";
+      case "Approved":
+        return "bg-green-100 text-green-800";
+      case "Published":
+        return "bg-purple-100 text-purple-800";
+      case "Archived":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
   
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log("Form values:", values);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "In Progress":
+        return <Clock className="h-4 w-4" />;
+      case "Review":
+        return <AlertTriangle className="h-4 w-4" />;
+      case "Approved":
+        return <Check className="h-4 w-4" />;
+      case "Published":
+        return <FileText className="h-4 w-4" />;
+      case "Archived":
+        return <FileText className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
+    }
+  };
+  
+  const handleActionClick = (action: string, legislation: any) => {
+    setSelectedLegislation(legislation);
     
-    // Close dialog and show success message
-    setIsCreateDialogOpen(false);
-    form.reset();
-    
-    toast({
-      title: "Legislation created",
-      description: "The legislation has been successfully created.",
-    });
+    switch (action) {
+      case "view":
+        setIsDialogOpen(true);
+        break;
+      case "publish":
+        toast({
+          title: "Legislation Published",
+          description: `"${legislation.title}" has been published.`,
+        });
+        break;
+      case "archive":
+        toast({
+          title: "Legislation Archived",
+          description: `"${legislation.title}" has been archived.`,
+        });
+        break;
+      default:
+        break;
+    }
   };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-          <div>
-            <CardTitle>Manage Legislation</CardTitle>
-            <CardDescription>Create, edit, and manage legislation proposals</CardDescription>
+      <Tabs defaultValue="drafts" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="drafts">Drafts</TabsTrigger>
+          <TabsTrigger value="published">Published</TabsTrigger>
+          <TabsTrigger value="archived">Archived</TabsTrigger>
+        </TabsList>
+        
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <label htmlFor="search-legislation" className="text-sm font-medium mb-2 block">
+              Search Legislation
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search-legislation"
+                placeholder="Search by title or keyword"
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Legislation
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+          <div className="w-full sm:w-48">
+            <label htmlFor="status-filter" className="text-sm font-medium mb-2 block">
+              Filter by Status
+            </label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="status-filter" className="w-full">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all_status">All Status</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Review">Review</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Published">Published</SelectItem>
+                <SelectItem value="Archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <TabsContent value="drafts" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Draft Legislation</CardTitle>
+              <CardDescription>Manage legislation in progress, under review, or approved for publication</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md">
+                <div className="grid grid-cols-12 gap-4 p-4 border-b font-medium text-muted-foreground text-sm">
+                  <div className="col-span-5">Title</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Author</div>
+                  <div className="col-span-2">Last Updated</div>
+                  <div className="col-span-1 text-right">Actions</div>
+                </div>
+                
+                {filteredLegislation.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-muted-foreground">No legislation found matching your criteria.</p>
+                  </div>
+                ) : (
+                  filteredLegislation.map((legislation) => (
+                    <div key={legislation.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-muted/50 items-center">
+                      <div className="col-span-5 font-medium truncate" title={legislation.title}>
+                        {legislation.title}
+                      </div>
+                      <div className="col-span-2">
+                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(legislation.status)}`}>
+                          {getStatusIcon(legislation.status)}
+                          {legislation.status}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 text-muted-foreground">{legislation.author}</div>
+                      <div className="col-span-2 text-muted-foreground">
+                        {new Date(legislation.lastUpdated).toLocaleDateString()}
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleActionClick("view", legislation)}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="published" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Published Legislation</CardTitle>
+              <CardDescription>View and manage legislation that has been published and is currently active</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md">
+                <div className="grid grid-cols-12 gap-4 p-4 border-b font-medium text-muted-foreground text-sm">
+                  <div className="col-span-5">Title</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Author</div>
+                  <div className="col-span-2">Published Date</div>
+                  <div className="col-span-1 text-right">Actions</div>
+                </div>
+                
+                {filteredLegislation.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-muted-foreground">No published legislation found.</p>
+                  </div>
+                ) : (
+                  filteredLegislation.map((legislation) => (
+                    <div key={legislation.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-muted/50 items-center">
+                      <div className="col-span-5 font-medium truncate" title={legislation.title}>
+                        {legislation.title}
+                      </div>
+                      <div className="col-span-2">
+                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(legislation.status)}`}>
+                          {getStatusIcon(legislation.status)}
+                          {legislation.status}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 text-muted-foreground">{legislation.author}</div>
+                      <div className="col-span-2 text-muted-foreground">
+                        {new Date(legislation.datePublished || legislation.lastUpdated).toLocaleDateString()}
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleActionClick("view", legislation)}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="archived" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Archived Legislation</CardTitle>
+              <CardDescription>View and reference legislation that has been archived</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md">
+                <div className="grid grid-cols-12 gap-4 p-4 border-b font-medium text-muted-foreground text-sm">
+                  <div className="col-span-5">Title</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Author</div>
+                  <div className="col-span-2">Archived Date</div>
+                  <div className="col-span-1 text-right">Actions</div>
+                </div>
+                
+                {filteredLegislation.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-muted-foreground">No archived legislation found.</p>
+                  </div>
+                ) : (
+                  filteredLegislation.map((legislation) => (
+                    <div key={legislation.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-muted/50 items-center">
+                      <div className="col-span-5 font-medium truncate" title={legislation.title}>
+                        {legislation.title}
+                      </div>
+                      <div className="col-span-2">
+                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(legislation.status)}`}>
+                          {getStatusIcon(legislation.status)}
+                          {legislation.status}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 text-muted-foreground">{legislation.author}</div>
+                      <div className="col-span-2 text-muted-foreground">
+                        {new Date(legislation.dateArchived || legislation.lastUpdated).toLocaleDateString()}
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleActionClick("view", legislation)}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      <Button className="w-full sm:w-auto">
+        <FilePlus className="h-4 w-4 mr-2" />
+        Create New Legislation
+      </Button>
+      
+      {/* Legislation Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          {selectedLegislation && (
+            <>
               <DialogHeader>
-                <DialogTitle>Create New Legislation</DialogTitle>
+                <DialogTitle>{selectedLegislation.title}</DialogTitle>
                 <DialogDescription>
-                  Fill in the details below to create a new legislation proposal.
+                  Created by {selectedLegislation.author} on {new Date(selectedLegislation.dateCreated).toLocaleDateString()}
                 </DialogDescription>
               </DialogHeader>
               
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid grid-cols-2">
-                      <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                      <TabsTrigger value="details">Details & Scheduling</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="basic" className="space-y-4 pt-4">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter legislation title" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a category" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Environment">Environment</SelectItem>
-                                <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-                                <SelectItem value="Safety">Safety</SelectItem>
-                                <SelectItem value="Economy">Economy</SelectItem>
-                                <SelectItem value="Education">Education</SelectItem>
-                                <SelectItem value="Housing">Housing</SelectItem>
-                                <SelectItem value="Health">Health</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="summary"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Summary</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Brief summary of the legislation" 
-                                className="min-h-24"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="details" className="space-y-4 pt-4">
-                      <FormField
-                        control={form.control}
-                        name="fullText"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Text</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Complete legislation text" 
-                                className="min-h-64"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="sponsors"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Sponsors</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Names of sponsors" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="effectiveDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Effective Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant={"outline"}
-                                      className={cn(
-                                        "pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP")
-                                      ) : (
-                                        <span>Pick a date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date < new Date()}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                  
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">Create Legislation</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search legislation..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="w-full sm:w-48">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <div className="flex items-center">
-                      <Filter className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="All Status" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Draft">Draft</SelectItem>
-                    <SelectItem value="Under Review">Under Review</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="border rounded-md">
-              <div className="grid grid-cols-12 gap-4 p-4 border-b font-medium text-muted-foreground text-sm">
-                <div className="col-span-4">Title</div>
-                <div className="col-span-2">Status</div>
-                <div className="col-span-2">Category</div>
-                <div className="col-span-2">Date</div>
-                <div className="col-span-1 text-center">Votes</div>
-                <div className="col-span-1 text-right">Actions</div>
-              </div>
-              
-              {filteredLegislation.length === 0 ? (
-                <div className="p-6 text-center">
-                  <p className="text-muted-foreground">No legislation found matching your criteria.</p>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3 mb-2">
+                  <Badge className={getStatusColor(selectedLegislation.status)}>
+                    {selectedLegislation.status}
+                  </Badge>
                 </div>
-              ) : (
-                filteredLegislation.map((item) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-muted/50 items-center">
-                    <div className="col-span-4 font-medium truncate" title={item.title}>
-                      {item.title}
-                    </div>
-                    <div className="col-span-2">
-                      <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                    </div>
-                    <div className="col-span-2 text-muted-foreground">{item.category}</div>
-                    <div className="col-span-2 text-muted-foreground">
-                      {new Date(item.dateSubmitted).toLocaleDateString()}
-                    </div>
-                    <div className="col-span-1 text-center">
-                      <span className="text-green-600 font-medium">{item.votes.for}</span>
-                      <span className="mx-1">/</span>
-                      <span className="text-red-600 font-medium">{item.votes.against}</span>
-                    </div>
-                    <div className="col-span-1 flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" title="Edit">
-                        <FilePenLine className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="Delete">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold mb-1">Summary</h4>
+                    <p className="text-muted-foreground text-sm">
+                      This is a mock summary for the selected legislation. In an actual implementation, 
+                      this would display the full summary provided by the author, explaining the 
+                      purpose of the legislation, its key provisions, and expected impact.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-semibold mb-1">Timeline</h4>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created:</span>
+                        <span>{new Date(selectedLegislation.dateCreated).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Updated:</span>
+                        <span>{new Date(selectedLegislation.lastUpdated).toLocaleDateString()}</span>
+                      </div>
+                      {selectedLegislation.datePublished && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Published:</span>
+                          <span>{new Date(selectedLegislation.datePublished).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {selectedLegislation.dateArchived && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Archived:</span>
+                          <span>{new Date(selectedLegislation.dateArchived).toLocaleDateString()}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                </div>
+                
+                <div className="pt-2">
+                  <h4 className="text-sm font-semibold mb-2">Actions</h4>
+                  <div className="flex gap-2">
+                    {selectedLegislation.status === "Approved" && (
+                      <Button 
+                        variant="default" 
+                        onClick={() => {
+                          handleActionClick("publish", selectedLegislation);
+                          setIsDialogOpen(false);
+                        }}
+                      >
+                        Publish Legislation
+                      </Button>
+                    )}
+                    {selectedLegislation.status === "Published" && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          handleActionClick("archive", selectedLegislation);
+                          setIsDialogOpen(false);
+                        }}
+                      >
+                        Archive Legislation
+                      </Button>
+                    )}
+                    <Button variant="outline">Edit</Button>
+                    <Button variant="outline">View Full Document</Button>
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
