@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, X, Check, FileText, Loader2, LockKeyhole } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { UploadCloud, X, Check, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { BudgetItemForm } from "./BudgetItemForm";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ProcessedData {
   amount: number | null;
@@ -24,9 +23,10 @@ const BudgetOcrUploader = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
-  const [apiKey, setApiKey] = useState<string>("");
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Hardcoded API key
+  const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -86,18 +86,13 @@ const BudgetOcrUploader = () => {
       return;
     }
     
-    if (!apiKey) {
-      setShowApiKeyDialog(true);
-      return;
-    }
-    
     setProcessing(true);
     
     try {
       // Create form data for the API request
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('api_key', apiKey);
+      formData.append('api_key', MISTRAL_API_KEY);
       
       // Send request to our FastAPI backend
       const response = await fetch('http://localhost:8000/ocr', {
@@ -138,38 +133,6 @@ const BudgetOcrUploader = () => {
       setProcessing(false);
     }
   };
-
-  const handleSaveApiKey = () => {
-    if (apiKey) {
-      // Store API key in sessionStorage (it will be cleared when the browser is closed)
-      // This is more secure than localStorage for sensitive data
-      sessionStorage.setItem('mistral_api_key', apiKey);
-      setShowApiKeyDialog(false);
-      toast({
-        title: "API Key Saved",
-        description: "Your API key is saved for this session only.",
-      });
-      
-      // Process the image if a file is selected
-      if (file) {
-        handleProcessImage();
-      }
-    } else {
-      toast({
-        title: "API Key Required",
-        description: "Please enter a valid API key.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Check for saved API key on component mount
-  useState(() => {
-    const savedApiKey = sessionStorage.getItem('mistral_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -279,43 +242,6 @@ const BudgetOcrUploader = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* API Key Dialog */}
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Mistral AI API Key</DialogTitle>
-            <DialogDescription>
-              Your API key is required to process the receipt. It will be stored only for this session.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="api-key" className="mb-2 block">API Key</Label>
-            <div className="flex items-center space-x-2">
-              <LockKeyhole size={16} className="text-civic-gray" />
-              <Input 
-                id="api-key"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your Mistral AI API key"
-                className="flex-1"
-              />
-            </div>
-            <p className="mt-2 text-xs text-civic-gray">
-              Your API key is never stored on our server and is only used to make requests to Mistral AI.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveApiKey} className="bg-civic-blue hover:bg-civic-blue-dark">
-              Save & Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

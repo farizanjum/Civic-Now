@@ -132,13 +132,21 @@ def extract_receipt_data(text: str) -> dict:
             except (ValueError, IndexError):
                 continue
     
-    # Find total amount
+    # Find total amount (handle both $ and ₹ currency symbols)
     amount_patterns = [
-        r'Total: \$?(\d+\.\d+)',
-        r'TOTAL\s+\$?(\d+\.\d+)',
-        r'Amount: \$?(\d+\.\d+)',
-        r'AMOUNT\s+\$?(\d+\.\d+)',
-        r'Total\s+\$?(\d+\.\d+)'
+        r'Total: [₹$]?(\d+\.\d+)',
+        r'TOTAL\s+[₹$]?(\d+\.\d+)',
+        r'Amount: [₹$]?(\d+\.\d+)',
+        r'AMOUNT\s+[₹$]?(\d+\.\d+)',
+        r'Total\s+[₹$]?(\d+\.\d+)',
+        # Indian specific patterns
+        r'Grand Total: [₹]?(\d+\.\d+)',
+        r'कुल राशि: [₹]?(\d+\.\d+)', # Hindi
+        r'मूल्य: [₹]?(\d+\.\d+)', # Hindi
+        r'ಒಟ್ಟು: [₹]?(\d+\.\d+)', # Kannada
+        r'മൊത്തം: [₹]?(\d+\.\d+)', # Malayalam
+        r'Total Amount: [₹]?(\d+\.\d+)',
+        r'Bill Amount: [₹]?(\d+\.\d+)'
     ]
     
     for pattern in amount_patterns:
@@ -152,9 +160,13 @@ def extract_receipt_data(text: str) -> dict:
     
     # Extract items and prices
     item_patterns = [
-        r'([A-Za-z0-9\s]+)\.{2,}\s*\$?(\d+\.\d+)',  # Item..... $XX.XX
-        r'([A-Za-z0-9\s]+)\s+\$?(\d+\.\d+)',        # Item     $XX.XX
-        r'([A-Za-z0-9\s]+):\s*\$?(\d+\.\d+)'        # Item: $XX.XX
+        r'([A-Za-z0-9\s]+)\.{2,}\s*[₹$]?(\d+\.\d+)',  # Item..... ₹XX.XX
+        r'([A-Za-z0-9\s]+)\s+[₹$]?(\d+\.\d+)',        # Item     ₹XX.XX
+        r'([A-Za-z0-9\s]+):\s*[₹$]?(\d+\.\d+)',       # Item: ₹XX.XX
+        # Indian specific patterns
+        r'([ऀ-ॿ\s]+)\s+[₹]?(\d+\.\d+)',               # Hindi items
+        r'([ಅ-ೞ\s]+)\s+[₹]?(\d+\.\d+)',               # Kannada items
+        r'([അ-ൿ\s]+)\s+[₹]?(\d+\.\d+)'                # Malayalam items
     ]
     
     for line in lines:
@@ -163,7 +175,7 @@ def extract_receipt_data(text: str) -> dict:
             if matches:
                 for match in matches:
                     item_name = match[0].strip()
-                    if item_name.lower() not in ["total", "subtotal", "tax", "amount"]:
+                    if item_name.lower() not in ["total", "subtotal", "tax", "amount", "grand total", "bill amount"]:
                         try:
                             price = float(match[1])
                             data["items"].append({"name": item_name, "price": price})
@@ -172,8 +184,12 @@ def extract_receipt_data(text: str) -> dict:
     
     # If we find "Tax" specifically, add it as a separate item
     tax_patterns = [
-        r'Tax:?\s*\$?(\d+\.\d+)',
-        r'TAX\s+\$?(\d+\.\d+)'
+        r'Tax:?\s*[₹$]?(\d+\.\d+)',
+        r'TAX\s+[₹$]?(\d+\.\d+)',
+        r'GST:?\s*[₹]?(\d+\.\d+)',  # Indian GST
+        r'SGST:?\s*[₹]?(\d+\.\d+)', # State GST in India
+        r'CGST:?\s*[₹]?(\d+\.\d+)', # Central GST in India
+        r'कर:?\s*[₹]?(\d+\.\d+)'    # Tax in Hindi
     ]
     
     for pattern in tax_patterns:

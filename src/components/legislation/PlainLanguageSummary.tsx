@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Tooltip,
   TooltipContent,
@@ -36,34 +37,25 @@ interface LegislationSummaryProps {
 
 const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   title,
-  originalText,
+  originalText: initialOriginalText,
   plainSummary: initialPlainSummary,
-  impacts,
+  impacts: initialImpacts,
   status,
   date,
   category
 }) => {
+  const [originalText, setOriginalText] = useState(initialOriginalText);
   const [plainSummary, setPlainSummary] = useState(initialPlainSummary);
+  const [impacts, setImpacts] = useState(initialImpacts);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [apiKey, setApiKey] = useState<string>("");
   
-  // Check for saved API key on component mount
-  useEffect(() => {
-    const savedApiKey = sessionStorage.getItem('mistral_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
+  // Hardcoded API key - Remove user prompt
+  const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
   const generateSummary = async () => {
-    if (!apiKey) {
-      const key = prompt("Please enter your Mistral AI API key:");
-      if (!key) {
-        toast.error("API key required to generate summary");
-        return;
-      }
-      sessionStorage.setItem('mistral_api_key', key);
-      setApiKey(key);
+    if (!originalText.trim()) {
+      toast.error("Please enter some legislative text to summarize");
+      return;
     }
     
     setIsGenerating(true);
@@ -73,14 +65,14 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey || sessionStorage.getItem('mistral_api_key')}`
+          "Authorization": `Bearer ${MISTRAL_API_KEY}`
         },
         body: JSON.stringify({
           model: "mistral-large-latest",
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate."
+              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT include any asterisks (**) in your output as they're used for markdown formatting. Instead, format your output as well-organized plain text with proper paragraphs and spacing."
             },
             {
               role: "user",
@@ -99,11 +91,64 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       const data = await response.json();
       const generatedSummary = data.choices[0].message.content;
       
+      // Generate impacts
+      const impactsResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MISTRAL_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "mistral-large-latest",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. List 3-5 bullet points for each category. Use Indian context, places, and examples. Be concise and specific for each bullet point."
+            },
+            {
+              role: "user",
+              content: `Analyze the following legislative text and provide impacts:\n\n${originalText}`
+            }
+          ],
+          temperature: 0.4,
+          max_tokens: 600
+        })
+      });
+      
+      if (!impactsResponse.ok) {
+        throw new Error(`Error generating impacts: ${impactsResponse.status}`);
+      }
+      
+      const impactsData = await impactsResponse.json();
+      const impactsContent = impactsData.choices[0].message.content;
+      
+      // Parse the impacts from the AI response
+      const positiveRegex = /Positive Impacts:[\s\S]*?(?=Potential Concerns:|$)/i;
+      const negativeRegex = /Potential Concerns:[\s\S]*?(?=Uncertain Effects:|$)/i;
+      const uncertainRegex = /Uncertain Effects:[\s\S]*?(?=$)/i;
+      
+      const positiveMatch = impactsContent.match(positiveRegex);
+      const negativeMatch = impactsContent.match(negativeRegex);
+      const uncertainMatch = impactsContent.match(uncertainRegex);
+      
+      const extractBulletPoints = (text) => {
+        if (!text) return [];
+        const bulletPoints = text.split(/\n-|\n•/).slice(1);
+        return bulletPoints.map(point => point.trim()).filter(point => point);
+      };
+      
+      const newImpacts = {
+        positive: positiveMatch ? extractBulletPoints(positiveMatch[0]) : [],
+        negative: negativeMatch ? extractBulletPoints(negativeMatch[0]) : [],
+        uncertain: uncertainMatch ? extractBulletPoints(uncertainMatch[0]) : []
+      };
+      
       setPlainSummary(generatedSummary);
-      toast.success("Summary generated successfully!");
+      setImpacts(newImpacts);
+      toast.success("Summary and impacts generated successfully!");
     } catch (error) {
       console.error("Summary generation error:", error);
-      toast.error("Failed to generate summary. Please check your API key and try again.");
+      toast.error("Failed to generate summary. Please try again later.");
     } finally {
       setIsGenerating(false);
     }
@@ -205,7 +250,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
         
         <Separator className="my-6" />
         
-        {/* Original Text */}
+        {/* Original Text Input */}
         <div>
           <h3 className="text-lg font-semibold mb-2 flex items-center">
             <span className="text-xs">Original Legislative Text</span>
@@ -215,14 +260,17 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
                   <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs max-w-xs">This is the official text of the legislation as proposed.</p>
+                  <p className="text-xs max-w-xs">Enter the official text of the legislation here. Click Generate with AI to create a plain language summary.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </h3>
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 text-sm max-h-60 overflow-y-auto">
-            <p className="text-gray-700 whitespace-pre-line">{originalText}</p>
-          </div>
+          <Textarea 
+            className="bg-gray-50 p-4 rounded-md border border-gray-200 text-sm min-h-60" 
+            placeholder="Paste or enter the legislative text here..." 
+            value={originalText}
+            onChange={(e) => setOriginalText(e.target.value)}
+          />
         </div>
       </CardContent>
       

@@ -1,15 +1,15 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileText, BarChart, Receipt } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { toast } from "sonner";
+import { BarChart, Receipt, FileText } from "lucide-react";
 import NeighborhoodNotifications from "@/components/notifications/NeighborhoodNotifications";
 import PlainLanguageSummary from "@/components/legislation/PlainLanguageSummary";
 import ImpactVisualization from "@/components/impact/ImpactVisualization";
+import BudgetOcrUploader from "@/components/budget/BudgetOcrUploader";
+import BudgetSummary from "@/components/budget/BudgetSummary";
 
 // Sample data for legislation summary with Indian context
 const sampleLegislationData = {
@@ -40,61 +40,6 @@ const sampleLegislationData = {
 };
 
 const Budget = () => {
-  const [file, setFile] = useState<File | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState('upload');
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      toast.info(`File selected: ${e.target.files[0].name}`);
-    }
-  };
-
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setApiKey(e.target.value);
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error("Please select a file to upload");
-      return;
-    }
-
-    if (!apiKey) {
-      toast.error("Please enter your Mistral API key");
-      return;
-    }
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('api_key', apiKey);
-
-    try {
-      const response = await fetch('/api/ocr', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setUploadResult(result);
-      setActiveTab('results');
-      toast.success("Receipt processed successfully!");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to process receipt. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   return (
     <Layout>
       <div className="civic-container py-8">
@@ -116,163 +61,22 @@ const Budget = () => {
               </CardHeader>
               
               <CardContent>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs defaultValue="upload" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="upload" className="flex items-center">
-                      <Upload className="h-4 w-4 mr-2" /> 
-                      Upload Document
+                      Upload & Scan
                     </TabsTrigger>
-                    <TabsTrigger value="results" className="flex items-center" disabled={!uploadResult}>
-                      <FileText className="h-4 w-4 mr-2" /> 
-                      Extracted Data
+                    <TabsTrigger value="summary" className="flex items-center">
+                      Budget Summary
                     </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="upload" className="pt-6">
-                    <div className="space-y-6">
-                      <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Upload a document</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Supported formats: JPG, PNG, PDF
-                        </p>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.pdf"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                        />
-                        <label htmlFor="file-upload">
-                          <Button variant="outline" className="mr-4">
-                            Browse Files
-                          </Button>
-                        </label>
-                        {file && (
-                          <span className="text-sm font-medium text-gray-700">
-                            {file.name}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label htmlFor="api-key" className="block text-sm font-medium text-gray-700 mb-1">
-                            Mistral API Key
-                          </label>
-                          <input
-                            type="password"
-                            id="api-key"
-                            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-civic-blue focus:border-civic-blue"
-                            placeholder="Enter your Mistral API key"
-                            value={apiKey}
-                            onChange={handleApiKeyChange}
-                          />
-                          <p className="mt-1 text-xs text-gray-500">
-                            Your API key is only used for this request and is never stored.
-                          </p>
-                        </div>
-                        
-                        <Button 
-                          onClick={handleUpload} 
-                          disabled={!file || !apiKey || isUploading}
-                          className="w-full"
-                        >
-                          {isUploading ? "Processing..." : "Process Document"}
-                        </Button>
-                        
-                        <Alert>
-                          <AlertTitle>How it works</AlertTitle>
-                          <AlertDescription>
-                            We use Mistral AI's Document OCR to extract information from your uploaded document.
-                            Your document is processed securely, and the extracted data is formatted for easy review.
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    </div>
+                    <BudgetOcrUploader />
                   </TabsContent>
                   
-                  <TabsContent value="results" className="pt-6">
-                    {uploadResult && (
-                      <div className="space-y-6">
-                        <Alert className="bg-green-50 border-green-100">
-                          <AlertTitle className="text-green-800">Document Successfully Processed</AlertTitle>
-                          <AlertDescription className="text-green-700">
-                            We've extracted the following information from your document.
-                          </AlertDescription>
-                        </Alert>
-                        
-                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                          <h3 className="text-lg font-semibold mb-4 text-civic-blue">Extracted Information</h3>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500 mb-1">Merchant</h4>
-                              <p className="text-lg font-medium">{uploadResult.merchant || "Not detected"}</p>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500 mb-1">Date</h4>
-                              <p className="text-lg font-medium">{uploadResult.date || "Not detected"}</p>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500 mb-1">Total Amount</h4>
-                              <p className="text-lg font-medium">
-                                {uploadResult.amount ? `₹${uploadResult.amount.toFixed(2)}` : "Not detected"}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Items</h4>
-                          {uploadResult.items && uploadResult.items.length > 0 ? (
-                            <div className="border rounded-md overflow-hidden mb-6">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Item
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Price
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {uploadResult.items.map((item: any, index: number) => (
-                                    <tr key={index}>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {item.name}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                        ₹{item.price.toFixed(2)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <p className="text-gray-500 mb-6">No items detected</p>
-                          )}
-                          
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500 mb-2">Raw Text</h4>
-                            <div className="bg-gray-50 p-4 rounded-md text-sm font-mono text-gray-700 max-h-60 overflow-y-auto whitespace-pre-line">
-                              {uploadResult.raw_text}
-                            </div>
-                          </div>
-                          
-                          <div className="mt-6 flex justify-end space-x-4">
-                            <Button variant="outline" onClick={() => setActiveTab('upload')}>
-                              Scan Another Document
-                            </Button>
-                            <Button>
-                              Save to Budget Records
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  <TabsContent value="summary" className="pt-6">
+                    <BudgetSummary />
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -319,8 +123,8 @@ const Budget = () => {
                     <span>Submit Feedback</span>
                   </Button>
                   <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
-                    <Upload className="h-6 w-6 mb-2" />
-                    <span>Upload Document</span>
+                    <Receipt className="h-6 w-6 mb-2" />
+                    <span>Track Expenses</span>
                   </Button>
                   <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
                     <Receipt className="h-6 w-6 mb-2" />
