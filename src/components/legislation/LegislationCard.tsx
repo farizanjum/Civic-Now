@@ -1,9 +1,9 @@
 
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Eye, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
+import { CalendarDays, MapPin, MessageSquare } from "lucide-react";
 
 interface LegislationCardProps {
   id: string;
@@ -14,14 +14,8 @@ interface LegislationCardProps {
   category: string;
   neighborhoods: string[];
   commentCount: number;
+  onFeedbackClick?: (id: string) => void;
 }
-
-const statusColors = {
-  proposed: "bg-amber-100 text-amber-800 border-amber-200",
-  in_review: "bg-blue-100 text-blue-800 border-blue-200",
-  passed: "bg-green-100 text-green-800 border-green-200",
-  rejected: "bg-red-100 text-red-800 border-red-200",
-};
 
 const LegislationCard = ({
   id,
@@ -32,48 +26,85 @@ const LegislationCard = ({
   category,
   neighborhoods,
   commentCount,
+  onFeedbackClick
 }: LegislationCardProps) => {
+  // Map status to color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "proposed":
+        return "bg-yellow-100 text-yellow-800";
+      case "in_review":
+        return "bg-blue-100 text-blue-800";
+      case "passed":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Format status for display
+  const formatStatus = (status: string) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   return (
-    <Card className="card-hover overflow-hidden">
+    <Card className="transition-all hover:shadow-md">
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start mb-2">
-          <Badge variant="outline" className={`${statusColors[status]} capitalize`}>
-            {status.replace('_', ' ')}
-          </Badge>
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Tag size={12} /> {category}
-          </Badge>
+        <div className="flex flex-wrap justify-between gap-2 mb-2">
+          <Badge variant="secondary">{category}</Badge>
+          <Badge className={getStatusColor(status)}>{formatStatus(status)}</Badge>
         </div>
-        <CardTitle className="text-xl">{title}</CardTitle>
-        <CardDescription className="text-sm">
-          Published on {date}
-          {neighborhoods.length > 0 && (
-            <span> • Affects: {neighborhoods.join(', ')}</span>
-          )}
-        </CardDescription>
+        <CardTitle className="text-lg font-bold hover:text-civic-blue transition-colors">
+          <Link to={`/legislation/${id}`}>{title}</Link>
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-civic-gray-dark">{summary}</p>
+        <p className="text-muted-foreground mb-4 line-clamp-3">{summary}</p>
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center">
+            <CalendarDays className="h-3 w-3 mr-1" />
+            {date}
+          </div>
+          {neighborhoods.length > 0 && (
+            <div className="flex items-center">
+              <MapPin className="h-3 w-3 mr-1" />
+              {neighborhoods.length > 1
+                ? `${neighborhoods[0]} +${neighborhoods.length - 1}`
+                : neighborhoods[0]}
+            </div>
+          )}
+        </div>
       </CardContent>
-      <CardFooter className="flex justify-between items-center border-t pt-4">
-        <div className="flex items-center text-sm text-civic-gray">
-          <MessageSquare size={16} className="mr-1" /> 
-          <span>{commentCount} comments</span>
-        </div>
-        <div className="flex gap-2">
-          <Link to={`/legislation/${id}`}>
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
-              <Eye size={16} />
-              <span>View</span>
-            </Button>
-          </Link>
-          <Link to={`/legislation/${id}`}>
-            <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">
-              <MessageSquare size={16} className="mr-1" />
-              <span>Feedback</span>
-            </Button>
-          </Link>
-        </div>
+      <CardFooter className="flex justify-between pt-2 border-t">
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+        >
+          <Link to={`/legislation/${id}`}>View Details</Link>
+        </Button>
+        <Button
+          size="sm"
+          onClick={onFeedbackClick ? () => onFeedbackClick(id) : undefined}
+          asChild={!onFeedbackClick}
+        >
+          {onFeedbackClick ? (
+            <>
+              <MessageSquare className="h-4 w-4 mr-1.5" />
+              Feedback ({commentCount})
+            </>
+          ) : (
+            <Link to={`/legislation/${id}?tab=discussion`}>
+              <MessageSquare className="h-4 w-4 mr-1.5" />
+              Feedback ({commentCount})
+            </Link>
+          )}
+        </Button>
       </CardFooter>
     </Card>
   );

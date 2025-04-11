@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,36 +7,43 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, ArrowLeft, ThumbsUp, MessageSquare, Calendar, Clock, 
-  User, MapPin, Download, Share2, Copy, Mail, Phone, Globe 
+  User, MapPin, Download, Share2, Copy, Mail, Phone, Globe,
+  ThumbsDown
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const LegislationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
   const [legislation, setLegislation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
   const [commentText, setCommentText] = useState("");
   const [replyText, setReplyText] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [hasVoted, setHasVoted] = useState<"support" | "oppose" | null>(null);
   const shareUrlRef = useRef<HTMLInputElement>(null);
   
-  // Function to handle tab change with option to navigate programmatically
+  const urlParams = new URLSearchParams(location.search);
+  const tabFromUrl = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
+  
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Scroll to top when changing tabs
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('tab', value);
+    window.history.pushState({}, '', newUrl);
     window.scrollTo(0, 0);
   };
 
-  // Mock legislation data
   useEffect(() => {
-    // In a real app, this would be an API call using the ID from the URL
     setTimeout(() => {
       setLegislation({
         id: id,
@@ -122,9 +128,23 @@ const LegislationDetail = () => {
     }, 500);
   }, [id]);
 
-  // Function to handle vote actions
+  useEffect(() => {
+    if (!loading && legislation && tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [loading, legislation, tabFromUrl]);
+
   const handleVote = (vote: "support" | "oppose") => {
     if (!legislation) return;
+    
+    if (hasVoted) {
+      toast({
+        title: "Vote Already Cast",
+        description: `You have already voted ${hasVoted}. You cannot change or cast another vote.`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     setLegislation(prev => {
       if (vote === "support") {
@@ -142,13 +162,14 @@ const LegislationDetail = () => {
       }
     });
     
+    setHasVoted(vote);
+    
     toast({
       title: "Vote Recorded",
       description: `Your ${vote} vote has been recorded. Thank you for participating!`,
     });
   };
 
-  // Function to handle comment submission
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim() || !legislation) return;
@@ -176,7 +197,6 @@ const LegislationDetail = () => {
     setCommentText("");
   };
 
-  // Function to handle upvoting a comment
   const handleUpvoteComment = (commentId: string) => {
     if (!legislation) return;
     
@@ -188,9 +208,14 @@ const LegislationDetail = () => {
           : comment
       )
     }));
+    
+    toast({
+      title: "Upvoted Comment",
+      description: "Your vote has been recorded.",
+      variant: "default",
+    });
   };
 
-  // Function to handle reply submission
   const handleSubmitReply = (commentId: string) => {
     if (!replyText.trim() || !legislation) return;
     
@@ -224,7 +249,6 @@ const LegislationDetail = () => {
     setReplyingTo(null);
   };
 
-  // Function to handle upvoting a reply
   const handleUpvoteReply = (commentId: string, replyId: string) => {
     if (!legislation) return;
     
@@ -243,9 +267,14 @@ const LegislationDetail = () => {
           : comment
       )
     }));
+    
+    toast({
+      title: "Upvoted Reply",
+      description: "Your vote has been recorded.",
+      variant: "default",
+    });
   };
 
-  // Function to copy share URL to clipboard
   const handleCopyShareUrl = () => {
     if (shareUrlRef.current) {
       shareUrlRef.current.select();
@@ -257,7 +286,6 @@ const LegislationDetail = () => {
     }
   };
 
-  // Function to handle share via platforms
   const handleShareVia = (platform: string) => {
     const shareUrl = window.location.href;
     const shareTitle = legislation?.title || "Legislation";
@@ -321,6 +349,8 @@ const LegislationDetail = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const supportPercentage = Math.round((legislation.supportVotes / legislation.totalVotes) * 100);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -466,7 +496,6 @@ const LegislationDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {/* Comment input */}
                     <form onSubmit={handleSubmitComment} className="space-y-3">
                       <div>
                         <Textarea
@@ -520,7 +549,6 @@ const LegislationDetail = () => {
                                 </Button>
                               </div>
                               
-                              {/* Reply form */}
                               {replyingTo === comment.id && (
                                 <div className="mb-4 pl-4 border-l-2">
                                   <Textarea
@@ -548,7 +576,6 @@ const LegislationDetail = () => {
                                 </div>
                               )}
                               
-                              {/* Replies */}
                               {comment.replies && comment.replies.length > 0 && (
                                 <div className="pl-4 border-l-2 space-y-3 mt-3">
                                   {comment.replies.map((reply: any) => (
@@ -610,7 +637,7 @@ const LegislationDetail = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div 
                     className="bg-primary h-2.5 rounded-full transition-all duration-300" 
-                    style={{ width: `${(legislation.supportVotes / legislation.totalVotes) * 100}%` }}
+                    style={{ width: `${supportPercentage}%` }}
                   ></div>
                 </div>
                 <div className="text-xs text-center text-muted-foreground">
@@ -618,22 +645,33 @@ const LegislationDetail = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-2">
                   <Button 
-                    variant="outline" 
-                    className="bg-green-50 hover:bg-green-100 border-green-200"
+                    variant={hasVoted === "support" ? "default" : "outline"}
+                    className={hasVoted === "support" 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "bg-green-50 hover:bg-green-100 border-green-200"}
                     onClick={() => handleVote("support")}
+                    disabled={hasVoted !== null}
                   >
                     <ThumbsUp className="h-4 w-4 mr-2 text-green-600" />
                     Support
                   </Button>
                   <Button 
-                    variant="outline" 
-                    className="bg-red-50 hover:bg-red-100 border-red-200"
+                    variant={hasVoted === "oppose" ? "default" : "outline"}
+                    className={hasVoted === "oppose" 
+                      ? "bg-red-600 hover:bg-red-700" 
+                      : "bg-red-50 hover:bg-red-100 border-red-200"}
                     onClick={() => handleVote("oppose")}
+                    disabled={hasVoted !== null}
                   >
-                    <ThumbsUp className="h-4 w-4 mr-2 text-red-600 rotate-180" />
+                    <ThumbsDown className="h-4 w-4 mr-2 text-red-600" />
                     Oppose
                   </Button>
                 </div>
+                {hasVoted && (
+                  <div className="text-xs text-center text-muted-foreground mt-2">
+                    You have voted {hasVoted} on this legislation.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -709,7 +747,6 @@ const LegislationDetail = () => {
         </div>
       </div>
       
-      {/* Share Dialog */}
       <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -736,7 +773,7 @@ const LegislationDetail = () => {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4 py-4`}>
             <Button 
               variant="outline"
               className="bg-[#1da1f2]/10 hover:bg-[#1da1f2]/20 text-[#1da1f2]"
@@ -777,7 +814,6 @@ const LegislationDetail = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Contact Dialog */}
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

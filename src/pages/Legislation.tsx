@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Sample legislation data with Indian context
 const legislationData = [
@@ -82,6 +84,8 @@ const Legislation = () => {
   const [statusFilter, setStatusFilter] = useState<Status>("all");
   const [categoryFilter, setCategoryFilter] = useState<Category>("all");
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<Neighborhood>("all");
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Filter legislation based on selected filters
   const filteredLegislation = legislationData.filter((item) => {
@@ -104,6 +108,11 @@ const Legislation = () => {
     setStatusFilter("all");
     setCategoryFilter("all");
     setNeighborhoodFilter("all");
+  };
+
+  // Handle navigating to discussion tab directly
+  const handleFeedbackClick = (id: string) => {
+    navigate(`/legislation/${id}?tab=discussion`);
   };
 
   return (
@@ -129,9 +138,9 @@ const Legislation = () => {
                 />
               </div>
               
-              <div className="flex flex-wrap gap-2 md:gap-4">
+              <div className={`flex ${isMobile ? "flex-col" : "flex-wrap"} gap-2 md:gap-4`}>
                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as Status)}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className={`${isMobile ? "w-full" : "w-[140px]"}`}>
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -144,7 +153,7 @@ const Legislation = () => {
                 </Select>
                 
                 <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as Category)}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className={`${isMobile ? "w-full" : "w-[180px]"}`}>
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -159,7 +168,7 @@ const Legislation = () => {
                 </Select>
                 
                 <Select value={neighborhoodFilter} onValueChange={(value) => setNeighborhoodFilter(value as Neighborhood)}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className={`${isMobile ? "w-full" : "w-[180px]"}`}>
                     <SelectValue placeholder="Location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -243,6 +252,7 @@ const Legislation = () => {
                   category={item.category}
                   neighborhoods={item.neighborhoods}
                   commentCount={item.commentCount}
+                  onFeedbackClick={() => handleFeedbackClick(item.id)}
                 />
               ))
             ) : (
