@@ -1,7 +1,6 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
-import { ArrowUpRight, ArrowDownRight, Users, FileText, MessageSquare, CheckCircle } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Users, FileText, MessageSquare, CheckCircle, Lightbulb, Vote, MessageCircle, Settings } from "lucide-react";
 
 const AdminDashboard = () => {
   // Mock data for charts and stats
