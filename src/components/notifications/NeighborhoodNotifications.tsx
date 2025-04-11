@@ -15,8 +15,21 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+// Types for notifications
+type NotificationType = "alert" | "legislation" | "event" | "info";
+
+interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  type: NotificationType;
+  neighborhood: string;
+  read: boolean;
+}
+
 // Sample notification data with Indian context
-const sampleNotifications = [
+const sampleNotifications: Notification[] = [
   {
     id: "n1",
     title: "Road Closure Alert",
@@ -54,19 +67,6 @@ const sampleNotifications = [
     read: true
   }
 ];
-
-// Types for notifications
-type NotificationType = "alert" | "legislation" | "event" | "info";
-
-interface Notification {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  type: NotificationType;
-  neighborhood: string;
-  read: boolean;
-}
 
 const NeighborhoodNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications);
