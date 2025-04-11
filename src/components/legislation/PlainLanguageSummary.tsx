@@ -49,7 +49,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   const [impacts, setImpacts] = useState(initialImpacts);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Hardcoded API key - Remove user prompt
+  // Use a hardcoded API key instead of prompting the user
   const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
   const generateSummary = async () => {
@@ -103,11 +103,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. List 3-5 bullet points for each category. Use Indian context, places, and examples. Be concise and specific for each bullet point."
+              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. For each category, provide 3-5 bullet points that are concise (1-2 lines each max). Do not use any markdown formatting or asterisks. Keep each point brief and specific."
             },
             {
               role: "user",
-              content: `Analyze the following legislative text and provide impacts:\n\n${originalText}`
+              content: `Analyze the following legislative text and provide short, concise impacts (1-2 lines each):\n\n${originalText}`
             }
           ],
           temperature: 0.4,
@@ -133,7 +133,9 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       
       const extractBulletPoints = (text) => {
         if (!text) return [];
-        const bulletPoints = text.split(/\n-|\n•/).slice(1);
+        // Clean up any markdown formatting and extract the bullet points
+        const cleanedText = text.replace(/\*\*/g, '');
+        const bulletPoints = cleanedText.split(/\n-|\n•/).slice(1);
         return bulletPoints.map(point => point.trim()).filter(point => point);
       };
       

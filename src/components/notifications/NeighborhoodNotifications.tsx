@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Info, MapPin, AlertTriangle } from 'lucide-react';
 import { 
   Card, 
@@ -68,11 +68,67 @@ const sampleNotifications: Notification[] = [
   }
 ];
 
+// New notifications that will appear during the session
+const newNotifications: Notification[] = [
+  {
+    id: "n5",
+    title: "New Poll Available",
+    description: "Vote on the proposal for new community garden in Jayanagar Park.",
+    date: "April 11, 2023",
+    type: "event",
+    neighborhood: "Jayanagar",
+    read: false
+  },
+  {
+    id: "n6",
+    title: "Emergency Water Advisory",
+    description: "Water supply interruption in Richmond Town from 10 AM to 2 PM tomorrow.",
+    date: "April 11, 2023",
+    type: "alert",
+    neighborhood: "Richmond Town",
+    read: false
+  }
+];
+
 const NeighborhoodNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications);
   const [filter, setFilter] = useState<string>("all");
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  useEffect(() => {
+    // Simulate receiving real-time notifications
+    if (notificationsEnabled) {
+      const notificationInterval = setInterval(() => {
+        // Get a random new notification that hasn't been added yet
+        const availableNewNotifications = newNotifications.filter(
+          newNotif => !notifications.some(n => n.id === newNotif.id)
+        );
+        
+        if (availableNewNotifications.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availableNewNotifications.length);
+          const newNotification = availableNewNotifications[randomIndex];
+          
+          setNotifications(prev => [newNotification, ...prev]);
+          
+          // Show toast notification
+          toast(
+            <div>
+              <p className="font-semibold">{newNotification.title}</p>
+              <p className="text-sm">{newNotification.description}</p>
+            </div>,
+            {
+              icon: newNotification.type === 'alert' ? '🚨' : 
+                    newNotification.type === 'legislation' ? '📜' :
+                    newNotification.type === 'event' ? '📅' : 'ℹ️'
+            }
+          );
+        }
+      }, 30000); // Add a new notification every 30 seconds
+      
+      return () => clearInterval(notificationInterval);
+    }
+  }, [notificationsEnabled, notifications]);
 
   // Filter notifications based on type and neighborhood
   const filteredNotifications = notifications.filter(notification => {
@@ -199,6 +255,20 @@ const NeighborhoodNotifications = () => {
             onClick={() => setNeighborhoodFilter("Whitefield")}
           >
             Whitefield
+          </Badge>
+          <Badge 
+            variant={neighborhoodFilter === "Jayanagar" ? "default" : "outline"}
+            className="cursor-pointer"
+            onClick={() => setNeighborhoodFilter("Jayanagar")}
+          >
+            Jayanagar
+          </Badge>
+          <Badge 
+            variant={neighborhoodFilter === "Richmond Town" ? "default" : "outline"}
+            className="cursor-pointer"
+            onClick={() => setNeighborhoodFilter("Richmond Town")}
+          >
+            Richmond Town
           </Badge>
         </div>
       </div>

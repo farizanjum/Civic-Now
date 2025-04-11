@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Receipt, FileText } from "lucide-react";
+import { BarChart, Receipt, FileText, Feedback as FeedbackIcon } from "lucide-react";
+import { toast } from "sonner";
 import NeighborhoodNotifications from "@/components/notifications/NeighborhoodNotifications";
 import PlainLanguageSummary from "@/components/legislation/PlainLanguageSummary";
 import ImpactVisualization from "@/components/impact/ImpactVisualization";
@@ -55,6 +58,28 @@ const Budget = () => {
   const handleReceiptProcessed = (data: OcrResponse) => {
     setProcessedReceipt(data);
     setIsDialogOpen(true);
+  };
+  
+  const handleQuickLinkClick = (action: string) => {
+    switch(action) {
+      case "budget-reports":
+        toast.success("Opening budget reports dashboard...");
+        // In a real app, we would navigate to the reports page
+        break;
+      case "submit-feedback":
+        window.location.href = "/feedback";
+        break;
+      case "track-expenses":
+        toast.success("Opening expense tracking tools...");
+        // In a real app, we would navigate to the expense tracking page
+        break;
+      case "view-records":
+        toast.success("Loading all budget records...");
+        // In a real app, we would navigate to the records page
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -131,20 +156,36 @@ const Budget = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col items-center justify-center h-24 text-center"
+                    onClick={() => handleQuickLinkClick("budget-reports")}
+                  >
                     <BarChart className="h-6 w-6 mb-2" />
                     <span>Budget Reports</span>
                   </Button>
-                  <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
-                    <FileText className="h-6 w-6 mb-2" />
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col items-center justify-center h-24 text-center"
+                    onClick={() => handleQuickLinkClick("submit-feedback")}
+                  >
+                    <FeedbackIcon className="h-6 w-6 mb-2" />
                     <span>Submit Feedback</span>
                   </Button>
-                  <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col items-center justify-center h-24 text-center"
+                    onClick={() => handleQuickLinkClick("track-expenses")}
+                  >
                     <Receipt className="h-6 w-6 mb-2" />
                     <span>Track Expenses</span>
                   </Button>
-                  <Button variant="outline" className="flex flex-col items-center justify-center h-24 text-center">
-                    <Receipt className="h-6 w-6 mb-2" />
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col items-center justify-center h-24 text-center"
+                    onClick={() => handleQuickLinkClick("view-records")}
+                  >
+                    <FileText className="h-6 w-6 mb-2" />
                     <span>View All Records</span>
                   </Button>
                 </div>

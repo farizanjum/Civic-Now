@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Receipt, Key } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Upload, Receipt } from "lucide-react";
 
 interface OcrResponse {
   merchant: string;
@@ -16,21 +16,17 @@ interface OcrResponse {
 }
 
 const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: OcrResponse) => void }) => {
-  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [apiKey, setApiKey] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiKeyInputRef = useRef<HTMLInputElement>(null);
+  
+  // Hardcoded API key instead of asking users to provide it
+  const API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
-  };
-
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setApiKey(e.target.value);
   };
 
   const resetForm = () => {
@@ -45,19 +41,7 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
     e.preventDefault();
     
     if (!file) {
-      toast({
-        description: "Please select a receipt image to upload.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!apiKey) {
-      toast({
-        description: "Please enter your API key.",
-        variant: "destructive",
-      });
-      apiKeyInputRef.current?.focus();
+      toast.error("Please select a receipt image to upload.");
       return;
     }
     
@@ -66,10 +50,10 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
     // Create FormData for the file upload
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("api_key", apiKey);
+    formData.append("api_key", API_KEY);
     
     try {
-      // Replace with your actual backend URL
+      // Backend API URL
       const response = await fetch("/api/ocr", {
         method: "POST",
         body: formData,
@@ -82,19 +66,14 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
       
       const data: OcrResponse = await response.json();
       
-      toast({
-        description: "Receipt processed successfully!",
-      });
+      toast.success("Receipt processed successfully!");
       
       onReceiptProcessed(data);
       resetForm();
       
     } catch (error) {
       console.error("Error processing receipt:", error);
-      toast({
-        description: error instanceof Error ? error.message : "Error processing receipt. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Error processing receipt. Please try again.");
       setIsUploading(false);
     }
   };
@@ -126,27 +105,6 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
             )}
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="api-key">
-              <div className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                <span>Mistral AI API Key</span>
-              </div>
-            </Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="Enter your Mistral API key"
-              ref={apiKeyInputRef}
-              value={apiKey}
-              onChange={handleApiKeyChange}
-              disabled={isUploading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Your API key is only used for this request and not stored.
-            </p>
-          </div>
-          
           <Button type="submit" className="w-full" disabled={isUploading}>
             {isUploading ? (
               <>
@@ -164,7 +122,7 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
       </CardContent>
       <CardFooter className="flex-col text-center text-xs text-muted-foreground">
         <p>
-          Your receipt will be processed securely. We use Mistral AI for text extraction.
+          Your receipt will be processed securely. We use AI for text extraction.
         </p>
       </CardFooter>
     </Card>
