@@ -113,7 +113,7 @@ const InitiativesList = () => {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all_categories">All Categories</SelectItem>
               <SelectItem value="Environment">Environment</SelectItem>
               <SelectItem value="Education">Education</SelectItem>
               <SelectItem value="Infrastructure">Infrastructure</SelectItem>

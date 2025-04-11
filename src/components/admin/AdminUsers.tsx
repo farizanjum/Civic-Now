@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Mock data for users
 const mockUsers = [
   {
     id: "U1",
@@ -95,7 +93,6 @@ const AdminUsers = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   
-  // Filter users based on search term, role, and status
   const filteredUsers = mockUsers.filter((user) => {
     return (
       (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -306,7 +303,7 @@ const AdminUsers = () => {
                         <SelectValue placeholder="All Roles" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Roles</SelectItem>
+                        <SelectItem value="all_roles">All Roles</SelectItem>
                         <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="Moderator">Moderator</SelectItem>
                         <SelectItem value="Representative">Representative</SelectItem>
@@ -321,7 +318,7 @@ const AdminUsers = () => {
                         <SelectValue placeholder="All Status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Status</SelectItem>
+                        <SelectItem value="all_status">All Status</SelectItem>
                         <SelectItem value="Active">Active</SelectItem>
                         <SelectItem value="Inactive">Inactive</SelectItem>
                         <SelectItem value="Pending">Pending</SelectItem>
