@@ -5,7 +5,7 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Receipt, FileText, Feedback as FeedbackIcon } from "lucide-react";
+import { BarChart, Receipt, FileText, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import NeighborhoodNotifications from "@/components/notifications/NeighborhoodNotifications";
 import PlainLanguageSummary from "@/components/legislation/PlainLanguageSummary";
@@ -169,7 +169,7 @@ const Budget = () => {
                     className="flex flex-col items-center justify-center h-24 text-center"
                     onClick={() => handleQuickLinkClick("submit-feedback")}
                   >
-                    <FeedbackIcon className="h-6 w-6 mb-2" />
+                    <MessageSquare className="h-6 w-6 mb-2" />
                     <span>Submit Feedback</span>
                   </Button>
                   <Button 
