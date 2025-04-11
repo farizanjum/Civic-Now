@@ -7,25 +7,40 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip as ChartTooltip } from "recharts";
 import { format, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { CalendarIcon, Plus, FileText, BarChart2, Users } from "lucide-react";
+import { 
+  CalendarIcon, 
+  Plus, 
+  FileText, 
+  BarChart2, 
+  Check, 
+  Clock, 
+  X, 
+  AlertCircle, 
+  Edit, 
+  Eye, 
+  Users,
+  Trash2
+} from "lucide-react";
 
 // Mock data for active polls
-const activePolls = [
+const INITIAL_ACTIVE_POLLS = [
   {
     id: "P1",
     title: "Community Center Improvement",
-    status: "Active",
+    status: "active",
     startDate: "2025-03-01",
     endDate: "2025-04-15",
     totalVotes: 256,
@@ -37,467 +52,949 @@ const activePolls = [
   {
     id: "P2",
     title: "Park Amenities Selection",
-    status: "Active",
+    status: "active",
     startDate: "2025-03-10",
-    endDate: "2025-04-10",
+    endDate: "2025-04-30",
     totalVotes: 189,
     options: [
-      { id: "opt1", label: "Playground equipment", votes: 72 },
-      { id: "opt2", label: "Walking trails", votes: 95 },
-      { id: "opt3", label: "Sports courts", votes: 22 },
+      { id: "opt1", label: "Playground equipment", votes: 78 },
+      { id: "opt2", label: "Walking trails", votes: 65 },
+      { id: "opt3", label: "Picnic areas", votes: 46 },
     ]
   },
   {
     id: "P3",
-    title: "Community Events Priority",
-    status: "Ended",
+    title: "Neighborhood Watch Program",
+    status: "ended",
     startDate: "2025-02-01",
-    endDate: "2025-03-01",
-    totalVotes: 432,
+    endDate: "2025-03-15",
+    totalVotes: 312,
     options: [
-      { id: "opt1", label: "Cultural festivals", votes: 187 },
-      { id: "opt2", label: "Educational workshops", votes: 98 },
-      { id: "opt3", label: "Family activities", votes: 147 },
+      { id: "opt1", label: "Implement program", votes: 229 },
+      { id: "opt2", label: "Do not implement", votes: 83 },
+    ]
+  },
+  {
+    id: "P4",
+    title: "Library Hours Extension",
+    status: "draft",
+    startDate: "2025-04-01",
+    endDate: "2025-05-01",
+    totalVotes: 0,
+    options: [
+      { id: "opt1", label: "Extend weekday hours", votes: 0 },
+      { id: "opt2", label: "Add weekend hours", votes: 0 },
+      { id: "opt3", label: "Keep current hours", votes: 0 },
     ]
   }
 ];
 
-// Form schema for creating a new vote
-const formSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title must be less than 100 characters."),
-  description: z.string().min(20, "Description must be at least 20 characters.").max(500, "Description must be less than 500 characters."),
-  options: z.array(z.string()).min(2, "At least 2 options are required."),
-  startDate: z.date(),
-  endDate: z.date(),
-  eligibility: z.string(),
-  isPublicResults: z.boolean(),
+// Mock voters data
+const mockVoters = [
+  { id: "v1", name: "Alex Johnson", avatar: "/placeholder.svg", vote: "opt1" },
+  { id: "v2", name: "Sarah Williams", avatar: "/placeholder.svg", vote: "opt2" },
+  { id: "v3", name: "Michael Brown", avatar: "/placeholder.svg", vote: "opt1" },
+  { id: "v4", name: "Emily Davis", avatar: "/placeholder.svg", vote: "opt3" },
+  { id: "v5", name: "David Wilson", avatar: "/placeholder.svg", vote: "opt1" },
+];
+
+// Color array for pie chart
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+// Form schema for creating/editing polls
+const pollFormSchema = z.object({
+  title: z.string().min(5, {
+    message: "Title must be at least 5 characters.",
+  }),
+  description: z.string().min(10, {
+    message: "Description must be at least 10 characters.",
+  }),
+  startDate: z.date({
+    required_error: "A start date is required.",
+  }),
+  endDate: z.date({
+    required_error: "An end date is required.",
+  }),
+  status: z.string({
+    required_error: "Please select a status.",
+  }),
+  options: z.array(
+    z.object({
+      label: z.string().min(1, { message: "Option text is required" }),
+    })
+  ).min(2, {
+    message: "At least two options are required.",
+  }),
+  allowMultipleVotes: z.boolean().default(false),
+  requireAuthentication: z.boolean().default(true),
 });
 
+type PollFormValues = z.infer<typeof pollFormSchema>;
+
+// Define poll type
+type Poll = {
+  id: string;
+  title: string;
+  description?: string;
+  status: "draft" | "active" | "ended";
+  startDate: string;
+  endDate: string;
+  totalVotes: number;
+  options: {
+    id: string;
+    label: string;
+    votes: number;
+  }[];
+  allowMultipleVotes?: boolean;
+  requireAuthentication?: boolean;
+  voters?: typeof mockVoters;
+};
+
 const AdminVoting = () => {
+  const [activePolls, setActivePolls] = useState<Poll[]>(INITIAL_ACTIVE_POLLS);
   const [activeTab, setActiveTab] = useState("active");
-  const [options, setOptions] = useState<string[]>(["", ""]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
+  const [isVotersDialogOpen, setIsVotersDialogOpen] = useState(false);
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<PollFormValues>({
+    resolver: zodResolver(pollFormSchema),
     defaultValues: {
       title: "",
       description: "",
-      options: ["", ""],
-      startDate: new Date(),
-      endDate: new Date(new Date().setDate(new Date().getDate() + 14)), // Default to 2 weeks
-      eligibility: "all",
-      isPublicResults: true,
+      status: "draft",
+      options: [{ label: "" }, { label: "" }],
+      allowMultipleVotes: false,
+      requireAuthentication: true,
     },
   });
   
-  const addOption = () => {
-    setOptions([...options, ""]);
-    const currentOptions = form.getValues("options");
-    form.setValue("options", [...currentOptions, ""]);
+  // Filter polls based on tab and search term
+  const filteredPolls = activePolls.filter(poll => {
+    const matchesTab = 
+      activeTab === "all" ||
+      (activeTab === "active" && poll.status === "active") ||
+      (activeTab === "draft" && poll.status === "draft") ||
+      (activeTab === "ended" && poll.status === "ended");
+    
+    const matchesSearch = poll.title.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesTab && matchesSearch;
+  });
+  
+  const onNewPoll = () => {
+    setIsEditMode(false);
+    form.reset({
+      title: "",
+      description: "",
+      status: "draft",
+      startDate: new Date(),
+      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      options: [{ label: "" }, { label: "" }],
+      allowMultipleVotes: false,
+      requireAuthentication: true,
+    });
+    setIsDialogOpen(true);
   };
   
-  const removeOption = (index: number) => {
-    if (options.length <= 2) {
-      toast({
-        title: "Error",
-        description: "At least 2 options are required.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const onEditPoll = (poll: Poll) => {
+    setSelectedPoll(poll);
+    setIsEditMode(true);
     
-    const newOptions = [...options];
-    newOptions.splice(index, 1);
-    setOptions(newOptions);
-    
-    const currentOptions = form.getValues("options");
-    const newFormOptions = [...currentOptions];
-    newFormOptions.splice(index, 1);
-    form.setValue("options", newFormOptions);
-  };
-  
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Filter out empty options
-    const filteredOptions = values.options.filter(opt => opt.trim() !== "");
-    
-    if (filteredOptions.length < 2) {
-      toast({
-        title: "Error",
-        description: "At least 2 non-empty options are required.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (isBefore(values.endDate, values.startDate)) {
-      toast({
-        title: "Error",
-        description: "End date cannot be before start date.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    console.log("Form values:", {...values, options: filteredOptions});
-    
-    toast({
-      title: "Poll Created",
-      description: "Your community vote has been created successfully.",
+    form.reset({
+      title: poll.title,
+      description: poll.description || "",
+      status: poll.status,
+      startDate: new Date(poll.startDate),
+      endDate: new Date(poll.endDate),
+      options: poll.options.map(option => ({ label: option.label })),
+      allowMultipleVotes: poll.allowMultipleVotes || false,
+      requireAuthentication: poll.requireAuthentication || true,
     });
     
-    form.reset();
-    setOptions(["", ""]);
+    setIsDialogOpen(true);
   };
   
-  // Calculate colors for the pie chart
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+  const onSubmit = (data: PollFormValues) => {
+    if (isEditMode && selectedPoll) {
+      // Update existing poll
+      const updatedPolls = activePolls.map(poll => 
+        poll.id === selectedPoll.id 
+          ? {
+              ...poll,
+              title: data.title,
+              description: data.description,
+              status: data.status as "draft" | "active" | "ended",
+              startDate: format(data.startDate, "yyyy-MM-dd"),
+              endDate: format(data.endDate, "yyyy-MM-dd"),
+              options: data.options.map((option, index) => ({
+                id: poll.options[index]?.id || `opt${index + 1}`,
+                label: option.label,
+                votes: poll.options[index]?.votes || 0,
+              })),
+              allowMultipleVotes: data.allowMultipleVotes,
+              requireAuthentication: data.requireAuthentication,
+            }
+          : poll
+      );
+      
+      setActivePolls(updatedPolls);
+      
+      toast({
+        title: "Poll Updated",
+        description: "The poll has been successfully updated.",
+      });
+    } else {
+      // Create new poll
+      const newPoll: Poll = {
+        id: `P${activePolls.length + 1}`,
+        title: data.title,
+        description: data.description,
+        status: data.status as "draft" | "active" | "ended",
+        startDate: format(data.startDate, "yyyy-MM-dd"),
+        endDate: format(data.endDate, "yyyy-MM-dd"),
+        totalVotes: 0,
+        options: data.options.map((option, index) => ({
+          id: `opt${index + 1}`,
+          label: option.label,
+          votes: 0,
+        })),
+        allowMultipleVotes: data.allowMultipleVotes,
+        requireAuthentication: data.requireAuthentication,
+      };
+      
+      setActivePolls([newPoll, ...activePolls]);
+      
+      toast({
+        title: "Poll Created",
+        description: "The new poll has been successfully created.",
+      });
+    }
+    
+    setIsDialogOpen(false);
+  };
   
+  const onDeletePoll = () => {
+    if (!selectedPoll) return;
+    
+    const updatedPolls = activePolls.filter(poll => poll.id !== selectedPoll.id);
+    setActivePolls(updatedPolls);
+    
+    toast({
+      title: "Poll Deleted",
+      description: "The poll has been successfully deleted.",
+    });
+    
+    setIsDeleteDialogOpen(false);
+    setSelectedPoll(null);
+  };
+  
+  const onEndPoll = (pollId: string) => {
+    const updatedPolls = activePolls.map(poll => 
+      poll.id === pollId 
+        ? { ...poll, status: "ended" }
+        : poll
+    );
+    
+    setActivePolls(updatedPolls);
+    
+    toast({
+      title: "Poll Ended",
+      description: "The poll has been marked as ended.",
+    });
+  };
+  
+  const showResults = (poll: Poll) => {
+    setSelectedPoll(poll);
+    setIsResultsDialogOpen(true);
+  };
+  
+  const showVoters = (poll: Poll) => {
+    // Assign mock voters to selected poll
+    const pollWithVoters = {
+      ...poll,
+      voters: [...mockVoters].sort(() => Math.random() - 0.5).slice(0, poll.totalVotes > 10 ? 10 : poll.totalVotes)
+    };
+    setSelectedPoll(pollWithVoters);
+    setIsVotersDialogOpen(true);
+  };
+  
+  // Function to add an option field
+  const addOption = () => {
+    const currentOptions = form.getValues("options");
+    form.setValue("options", [...currentOptions, { label: "" }]);
+  };
+  
+  // Function to remove an option field
+  const removeOption = (index: number) => {
+    const currentOptions = form.getValues("options");
+    if (currentOptions.length <= 2) {
+      toast({
+        title: "Cannot Remove Option",
+        description: "A poll must have at least two options.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    form.setValue(
+      "options",
+      currentOptions.filter((_, i) => i !== index)
+    );
+  };
+  
+  // Function to get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "draft":
+        return "bg-gray-100 text-gray-800";
+      case "ended":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+  
+  // Function to get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Clock className="h-4 w-4" />;
+      case "draft":
+        return <FileText className="h-4 w-4" />;
+      case "ended":
+        return <Check className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+  
+  // Prepare chart data for the selected poll
+  const prepareChartData = (poll: Poll) => {
+    return poll.options.map((option, index) => ({
+      name: option.label,
+      value: option.votes,
+      color: COLORS[index % COLORS.length]
+    }));
+  };
+  
+  // Custom pie chart label function
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = 25 + innerRadius + (outerRadius - innerRadius);
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    return percent > 0.05 ? (
+      <text
+        x={x}
+        y={y}
+        fill="#000"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        style={{ fontSize: '12px' }}
+      >
+        {`${name} (${(percent * 100).toFixed(0)}%)`}
+      </text>
+    ) : null;
+  };
+
+  // Custom tooltip component for better readability
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border rounded shadow-sm text-sm">
+          <p className="font-medium">{payload[0].name}</p>
+          <p>{`Votes: ${payload[0].value}`}</p>
+          <p>{`Percentage: ${((payload[0].value / selectedPoll?.totalVotes || 0) * 100).toFixed(1)}%`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="active">Active Polls</TabsTrigger>
-          <TabsTrigger value="create">Create New Poll</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="active" className="space-y-4">
-          {activePolls.map((poll) => (
-            <Card key={poll.id} className={poll.status === "Ended" ? "opacity-75" : ""}>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between">
-                  <CardTitle>{poll.title}</CardTitle>
-                  <Badge className={poll.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                    {poll.status}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle>Voting Management</CardTitle>
+              <CardDescription>
+                Create and manage community polls and voting initiatives
+              </CardDescription>
+            </div>
+            <Button onClick={onNewPoll}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Poll
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+              <div className="relative w-full sm:max-w-xs">
+                <Input
+                  placeholder="Search polls..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="active">Active</TabsTrigger>
+                  <TabsTrigger value="draft">Drafts</TabsTrigger>
+                  <TabsTrigger value="ended">Ended</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            
+            <div className="border rounded-md">
+              <div className="grid grid-cols-12 gap-4 p-4 border-b font-medium text-muted-foreground text-sm">
+                <div className="col-span-4">Poll Title</div>
+                <div className="col-span-1">Status</div>
+                <div className="col-span-2">Start Date</div>
+                <div className="col-span-2">End Date</div>
+                <div className="col-span-1">Votes</div>
+                <div className="col-span-2 text-right">Actions</div>
+              </div>
+              
+              {filteredPolls.length === 0 ? (
+                <div className="p-6 text-center">
+                  <p className="text-muted-foreground">No polls found matching your criteria.</p>
+                </div>
+              ) : (
+                filteredPolls.map((poll) => (
+                  <div key={poll.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-muted/50">
+                    <div className="col-span-4 font-medium truncate">{poll.title}</div>
+                    <div className="col-span-1">
+                      <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(poll.status)}`}>
+                        {getStatusIcon(poll.status)}
+                        <span className="hidden sm:inline">{poll.status.charAt(0).toUpperCase() + poll.status.slice(1)}</span>
+                      </Badge>
+                    </div>
+                    <div className="col-span-2 text-muted-foreground text-sm">
+                      {new Date(poll.startDate).toLocaleDateString()}
+                    </div>
+                    <div className="col-span-2 text-muted-foreground text-sm">
+                      {new Date(poll.endDate).toLocaleDateString()}
+                    </div>
+                    <div className="col-span-1 text-sm font-medium">{poll.totalVotes}</div>
+                    <div className="col-span-2 flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => showResults(poll)}
+                        title="View Results"
+                      >
+                        <BarChart2 className="h-4 w-4" />
+                        <span className="sr-only">View Results</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => showVoters(poll)}
+                        title="View Voters"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span className="sr-only">View Voters</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEditPoll(poll)}
+                        title="Edit Poll"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      {poll.status === "active" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEndPoll(poll.id)}
+                          title="End Poll"
+                        >
+                          <Check className="h-4 w-4" />
+                          <span className="sr-only">End Poll</span>
+                        </Button>
+                      )}
+                      {poll.status !== "active" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedPoll(poll);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          title="Delete Poll"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Create/Edit Poll Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Edit Poll" : "Create New Poll"}</DialogTitle>
+            <DialogDescription>
+              {isEditMode
+                ? "Update the details of your community poll."
+                : "Fill in the details to create a new community poll."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Poll Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter poll title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide a brief description of the poll"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => date && field.onChange(date)}
+                            disabled={(date) =>
+                              isBefore(date, new Date())
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => date && field.onChange(date)}
+                            disabled={(date) => {
+                              const startDate = form.getValues("startDate");
+                              return startDate && isBefore(date, startDate);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="ended">Ended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <FormLabel>Poll Options</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOption}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Option
+                  </Button>
+                </div>
+                
+                {form.getValues("options").map((_, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <FormField
+                      control={form.control}
+                      name={`options.${index}.label`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              placeholder={`Option ${index + 1}`}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeOption(index)}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="allowMultipleVotes"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Allow Multiple Votes</FormLabel>
+                        <FormDescription>
+                          Users can vote for multiple options
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="requireAuthentication"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Require Authentication</FormLabel>
+                        <FormDescription>
+                          Users must be logged in to vote
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter className="sticky bottom-0 bg-background pt-4 pb-2 z-10">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {isEditMode ? "Update Poll" : "Create Poll"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Poll Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this poll? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPoll && (
+            <div className="border p-3 rounded-md bg-muted/30 my-2">
+              <p className="font-medium">{selectedPoll.title}</p>
+              <p className="text-sm text-muted-foreground">
+                Status: {selectedPoll.status} • Votes: {selectedPoll.totalVotes}
+              </p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={onDeletePoll}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Results Dialog */}
+      <Dialog open={isResultsDialogOpen} onOpenChange={setIsResultsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Poll Results: {selectedPoll?.title}</DialogTitle>
+            <DialogDescription>
+              Current voting results and statistics
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPoll && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Status:</span>{" "}
+                  <Badge className={getStatusColor(selectedPoll.status)}>
+                    {selectedPoll.status.charAt(0).toUpperCase() + selectedPoll.status.slice(1)}
                   </Badge>
                 </div>
-                <CardDescription className="flex items-center gap-4">
-                  <span>
-                    {new Date(poll.startDate).toLocaleDateString()} - {new Date(poll.endDate).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" />
-                    {poll.totalVotes} votes
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    {poll.options.map((option) => (
-                      <div key={option.id} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>{option.label}</span>
-                          <span className="font-medium">{Math.round((option.votes / poll.totalVotes) * 100)}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className="bg-primary rounded-full h-2"
-                            style={{ width: `${(option.votes / poll.totalVotes) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="flex justify-center items-center">
-                    <div className="h-48 w-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={poll.options}
-                            dataKey="votes"
-                            nameKey="label"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={70}
-                            fill="#8884d8"
-                            label={({ name, percent }) => `${name.substring(0, 12)}${name.length > 12 ? '...' : ''} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {poll.options.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                <div>
+                  <span className="font-medium">Total Votes:</span> {selectedPoll.totalVotes}
                 </div>
-              </CardContent>
-              <CardFooter>
-                <div className="flex gap-2 w-full">
-                  <Button variant="outline" className="flex-1">Edit Poll</Button>
-                  {poll.status === "Active" ? (
-                    <Button variant="outline" className="flex-1">End Poll</Button>
-                  ) : (
-                    <Button variant="outline" className="flex-1">Archive</Button>
-                  )}
-                  <Button variant="outline" className="flex-1">Full Results</Button>
+                <div>
+                  <span className="font-medium">Start Date:</span>{" "}
+                  {new Date(selectedPoll.startDate).toLocaleDateString()}
                 </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </TabsContent>
-        
-        <TabsContent value="create">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Community Vote</CardTitle>
-              <CardDescription>Set up a new poll for community input</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Poll Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter a title for your poll" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe the purpose of this poll and what voters should consider" 
-                            className="min-h-24"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Poll Options</FormLabel>
-                      <Button type="button" variant="outline" size="sm" onClick={addOption} className="h-8">
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Add Option
-                      </Button>
-                    </div>
-                    
-                    {options.map((_, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <FormField
-                          control={form.control}
-                          name={`options.${index}`}
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormControl>
-                                <Input placeholder={`Option ${index + 1}`} {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-10 px-3 text-muted-foreground"
-                          onClick={() => removeOption(index)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Start Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => isBefore(date, new Date())}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                <div>
+                  <span className="font-medium">End Date:</span>{" "}
+                  {new Date(selectedPoll.endDate).toLocaleDateString()}
+                </div>
+              </div>
+              
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={prepareChartData(selectedPoll)}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      nameKey="name"
+                      dataKey="value"
+                      label={renderCustomizedLabel}
+                      labelLine={true}
+                      paddingAngle={4}
+                    >
+                      {prepareChartData(selectedPoll).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Legend 
+                      layout="vertical" 
+                      verticalAlign="middle" 
+                      align="right"
+                      formatter={(value, entry, index) => {
+                        const { value: votes } = entry.payload;
+                        const percentage = ((votes / selectedPoll.totalVotes) * 100).toFixed(1);
+                        return (
+                          <span className="text-sm">
+                            {value}: {votes} votes ({percentage}%)
+                          </span>
+                        );
+                      }}
                     />
-                    
-                    <FormField
-                      control={form.control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>End Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => 
-                                  isBefore(date, new Date()) || 
-                                  (form.getValues("startDate") && isBefore(date, form.getValues("startDate")))
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-medium">Detailed Results</h3>
+                <div className="border rounded-md overflow-hidden">
+                  <div className="grid grid-cols-8 gap-4 p-3 bg-muted/30 font-medium text-sm">
+                    <div className="col-span-4">Option</div>
+                    <div className="col-span-2 text-right">Votes</div>
+                    <div className="col-span-2 text-right">Percentage</div>
                   </div>
                   
-                  <FormField
-                    control={form.control}
-                    name="eligibility"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Voter Eligibility</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Who can vote?" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="all">All registered users</SelectItem>
-                            <SelectItem value="verified">Verified residents only</SelectItem>
-                            <SelectItem value="invited">Invited participants only</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="isPublicResults"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Show live results to voters
-                          </FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-4">
-                    <Button variant="outline" type="button" onClick={() => form.reset()}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">Create Poll</Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="analytics">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Active Polls</p>
-                  <p className="text-3xl font-bold">2</p>
+                  {selectedPoll.options.map((option) => (
+                    <div key={option.id} className="grid grid-cols-8 gap-4 p-3 border-t">
+                      <div className="col-span-4 font-medium">{option.label}</div>
+                      <div className="col-span-2 text-right">{option.votes}</div>
+                      <div className="col-span-2 text-right">
+                        {selectedPoll.totalVotes > 0
+                          ? `${((option.votes / selectedPoll.totalVotes) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Votes Cast</p>
-                  <p className="text-3xl font-bold">877</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Average Participation Rate</p>
-                  <p className="text-3xl font-bold">24.6%</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => showVoters(selectedPoll)}>
+                  <Users className="h-4 w-4 mr-2" />
+                  View Voters
+                </Button>
+                <Button onClick={() => setIsResultsDialogOpen(false)}>Close</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Voters Dialog */}
+      <Dialog open={isVotersDialogOpen} onOpenChange={setIsVotersDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Voters: {selectedPoll?.title}</DialogTitle>
+            <DialogDescription>
+              List of people who have participated in this poll
+            </DialogDescription>
+          </DialogHeader>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Voting Analytics</CardTitle>
-              <CardDescription>Comprehensive data on community voting patterns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center py-8 text-muted-foreground">
-                Detailed analytics to be implemented here
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {selectedPoll?.voters && selectedPoll.voters.length > 0 ? (
+            <div className="space-y-4">
+              {selectedPoll.voters.map((voter, index) => (
+                <div key={index} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={voter.avatar} alt={voter.name} />
+                      <AvatarFallback>{voter.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{voter.name}</span>
+                  </div>
+                  <Badge variant="outline">
+                    {selectedPoll.options.find(o => o.id === voter.vote)?.label.substring(0, 15) || "Unknown"}
+                    {(selectedPoll.options.find(o => o.id === voter.vote)?.label.length || 0) > 15 ? "..." : ""}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+              <p>No voting records available{selectedPoll?.totalVotes ? " (sample data only)" : ""}.</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setIsVotersDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

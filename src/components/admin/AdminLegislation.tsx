@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -519,7 +520,7 @@ const AdminLegislation = () => {
       </Card>
 
       <Dialog open={isNewLegislationDialogOpen} onOpenChange={setIsNewLegislationDialogOpen}>
-        <DialogContent className={`${isMobile ? "max-w-full h-[95svh] overflow-y-auto" : "max-w-3xl"}`}>
+        <DialogContent className={`${isMobile ? "max-w-full" : "max-w-3xl"} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle>{selectedLegislation ? "Edit Legislation" : "Create New Legislation"}</DialogTitle>
             <DialogDescription>
@@ -662,7 +663,7 @@ const AdminLegislation = () => {
                 />
               </div>
               
-              <DialogFooter className="mt-6 flex justify-between sm:justify-end gap-2">
+              <DialogFooter className="mt-6 sticky bottom-0 bg-background pt-4 pb-2 z-10">
                 <Button 
                   type="button" 
                   variant="outline" 
