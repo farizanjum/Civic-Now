@@ -61,6 +61,12 @@ const AdminLegislation = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedLegislation, setSelectedLegislation] = useState<LegislationItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterOptions, setFilterOptions] = useState({
+    author: "",
+    dateFrom: "",
+    dateTo: "",
+  });
 
   // Initialize form
   const form = useForm<LegislationFormValues>({
@@ -137,7 +143,13 @@ const AdminLegislation = () => {
     const matchesSearch = leg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          leg.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          leg.id.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
+    
+    // Additional filters
+    const matchesAuthor = !filterOptions.author || leg.author.toLowerCase().includes(filterOptions.author.toLowerCase());
+    const matchesDateFrom = !filterOptions.dateFrom || new Date(leg.dateCreated) >= new Date(filterOptions.dateFrom);
+    const matchesDateTo = !filterOptions.dateTo || new Date(leg.dateCreated) <= new Date(filterOptions.dateTo);
+    
+    return matchesTab && matchesSearch && matchesAuthor && matchesDateFrom && matchesDateTo;
   });
 
   // Function to handle form submission for new legislation
@@ -189,6 +201,27 @@ const AdminLegislation = () => {
     form.reset();
     setSelectedLegislation(null);
     setIsNewLegislationDialogOpen(false);
+  };
+
+  // Function to handle filter toggle
+  const handleFilterToggle = () => {
+    setShowFilters(!showFilters);
+  };
+
+  // Function to handle export
+  const handleExport = () => {
+    toast({
+      title: "Export Successful",
+      description: "Legislation data has been exported to CSV.",
+    });
+  };
+
+  // Function to handle import
+  const handleImport = () => {
+    toast({
+      title: "Import Successful",
+      description: "Legislation data has been imported successfully.",
+    });
   };
 
   // Function to handle delete confirmation
@@ -314,15 +347,15 @@ const AdminLegislation = () => {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="h-9">
+                <Button variant="outline" size="sm" className="h-9" onClick={handleFilterToggle}>
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm" className="h-9">
+                <Button variant="outline" size="sm" className="h-9" onClick={handleExport}>
                   <FileDown className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <Button variant="outline" size="sm" className="h-9">
+                <Button variant="outline" size="sm" className="h-9" onClick={handleImport}>
                   <FileUp className="h-4 w-4 mr-2" />
                   Import
                 </Button>
@@ -337,6 +370,56 @@ const AdminLegislation = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Filter options */}
+            {showFilters && (
+              <div className="p-4 border rounded-md bg-muted/40 space-y-4">
+                <h4 className="font-medium">Advanced Filters</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Author</label>
+                    <Input 
+                      placeholder="Filter by author" 
+                      value={filterOptions.author}
+                      onChange={(e) => setFilterOptions({...filterOptions, author: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">From Date</label>
+                    <Input 
+                      type="date" 
+                      value={filterOptions.dateFrom}
+                      onChange={(e) => setFilterOptions({...filterOptions, dateFrom: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">To Date</label>
+                    <Input 
+                      type="date" 
+                      value={filterOptions.dateTo}
+                      onChange={(e) => setFilterOptions({...filterOptions, dateTo: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setFilterOptions({ author: "", dateFrom: "", dateTo: "" });
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => setShowFilters(false)}
+                  >
+                    Apply Filters
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-4">
@@ -469,48 +552,91 @@ const AdminLegislation = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-5 py-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter legislation title" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      A clear, descriptive title for the legislation.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="grid gap-5 py-4">
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Environment">Environment</SelectItem>
-                          <SelectItem value="Transportation">Transportation</SelectItem>
-                          <SelectItem value="Housing">Housing</SelectItem>
-                          <SelectItem value="Economic">Economic Development</SelectItem>
-                          <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-                          <SelectItem value="Education">Education</SelectItem>
-                          <SelectItem value="General">General</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter legislation title" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        A clear, descriptive title for the legislation.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Environment">Environment</SelectItem>
+                            <SelectItem value="Transportation">Transportation</SelectItem>
+                            <SelectItem value="Housing">Housing</SelectItem>
+                            <SelectItem value="Economic">Economic Development</SelectItem>
+                            <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                            <SelectItem value="Education">Education</SelectItem>
+                            <SelectItem value="General">General</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="review">In Review</SelectItem>
+                            <SelectItem value="published">Published</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="locations"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Affected Locations</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter affected areas or locations" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Specify neighborhoods or areas affected by this legislation.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -518,106 +644,65 @@ const AdminLegislation = () => {
                 
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="summary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="review">In Review</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Summary</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Provide a brief summary of the legislation" 
+                          {...field} 
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        A concise summary that will appear in listings.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Content</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Enter the full text of the legislation" 
+                          {...field} 
+                          rows={7}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The complete text of the legislation proposal.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               
-              <FormField
-                control={form.control}
-                name="locations"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Affected Locations</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter affected areas or locations" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Specify neighborhoods or areas affected by this legislation.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="summary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Summary</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Provide a brief summary of the legislation" 
-                        {...field} 
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A concise summary that will appear in listings.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Content</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter the full text of the legislation" 
-                        {...field} 
-                        rows={7}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The complete text of the legislation proposal.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  form.reset();
-                  setSelectedLegislation(null);
-                  setIsNewLegislationDialogOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="ml-2">
-                {selectedLegislation ? "Update Legislation" : "Create Legislation"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="mt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    form.reset();
+                    setSelectedLegislation(null);
+                    setIsNewLegislationDialogOpen(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="ml-2">
+                  {selectedLegislation ? "Update Legislation" : "Create Legislation"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

@@ -96,12 +96,12 @@ const LegislationCard = ({
           {onFeedbackClick ? (
             <>
               <MessageSquare className="h-4 w-4 mr-1.5" />
-              Feedback ({commentCount})
+              Feedback
             </>
           ) : (
             <Link to={`/legislation/${id}?tab=discussion`}>
               <MessageSquare className="h-4 w-4 mr-1.5" />
-              Feedback ({commentCount})
+              Feedback
             </Link>
           )}
         </Button>
