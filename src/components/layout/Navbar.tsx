@@ -55,37 +55,37 @@ const Navbar = () => {
             </Button>
             
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <UserCircle size={18} />
-                    <span>{user.email?.split('@')[0]}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
-                    <LogOut size={16} className="mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <UserCircle size={18} />
+                      <span>{user.email?.split('@')[0]}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Profile</DropdownMenuItem>
+                    <DropdownMenuItem>Settings</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
+                      <LogOut size={16} className="mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <Link to="/admin">
+                  <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Admin Panel</Button>
+                </Link>
+              </>
             ) : (
               <Link to="/login">
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
                   <UserCircle size={18} />
                   <span>Sign In</span>
                 </Button>
-              </Link>
-            )}
-            
-            {user && (
-              <Link to="/admin">
-                <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Admin Panel</Button>
               </Link>
             )}
           </div>
