@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { 
@@ -476,9 +475,9 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
     
     // Normalize demographic percentages to ensure they sum to 100%
     neighborhoods.forEach(n => {
-      const sum = Object.values(n.demographics).reduce((a, b) => a + b, 0);
+      const sum = Object.values(n.demographics).reduce((a, b) => Number(a) + Number(b), 0);
       for (const key in n.demographics) {
-        n.demographics[key] = Math.round((n.demographics[key] / sum) * 100);
+        n.demographics[key] = Math.round((Number(n.demographics[key]) / sum) * 100);
       }
     });
     
