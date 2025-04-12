@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from "@/components/layout/Layout";
@@ -13,7 +12,7 @@ import ImpactVisualization from "@/components/impact/ImpactVisualization";
 import BudgetOcrUploader from "@/components/budget/BudgetOcrUploader";
 import BudgetSummary from "@/components/budget/BudgetSummary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BudgetItemForm } from "@/components/budget/BudgetItemForm";
+import BudgetItemForm from "@/components/budget/BudgetItemForm";
 
 // Sample data for legislation summary with Indian context
 const sampleLegislationData = {
