@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AtSign, Lock, UserPlus, LogIn } from "lucide-react";
+import { AtSign, Lock, UserPlus, LogIn, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { signIn, signUp, resetPassword } from "@/lib/auth";
+import { signIn, signUp, resetPassword, DEMO_CREDENTIALS } from "@/lib/auth";
 
 const AuthForm = () => {
   const [activeTab, setActiveTab] = useState("login");
@@ -26,6 +26,20 @@ const AuthForm = () => {
     setIsLoading(true);
     
     const result = await signIn(email, password);
+    
+    if (result.user) {
+      navigate("/");
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    setEmail(DEMO_CREDENTIALS.email);
+    setPassword(DEMO_CREDENTIALS.password);
+    
+    const result = await signIn(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password);
     
     if (result.user) {
       navigate("/");
@@ -122,6 +136,24 @@ const AuthForm = () => {
               </TabsList>
               
               <TabsContent value="login">
+                <div className="mb-4">
+                  <Button
+                    type="button"
+                    className="w-full bg-amber-500 hover:bg-amber-600"
+                    onClick={handleDemoLogin}
+                  >
+                    <Zap size={16} className="mr-2" />
+                    Quick Demo Login
+                  </Button>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-300"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs text-gray-500">
+                      <span className="bg-white px-2">or use email</span>
+                    </div>
+                  </div>
+                </div>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
@@ -230,6 +262,14 @@ const AuthForm = () => {
           <a href="/privacy" className="text-civic-blue hover:underline ml-1">Privacy Policy</a>.
         </CardFooter>
       </Card>
+      
+      <div className="mt-4 p-3 bg-gray-100 rounded-md border border-gray-200">
+        <h3 className="font-semibold text-sm text-gray-700 mb-1">Demo Account (for hackathon judges)</h3>
+        <div className="text-xs text-gray-600">
+          <p><span className="font-medium">Email:</span> {DEMO_CREDENTIALS.email}</p>
+          <p><span className="font-medium">Password:</span> {DEMO_CREDENTIALS.password}</p>
+        </div>
+      </div>
     </div>
   );
 };

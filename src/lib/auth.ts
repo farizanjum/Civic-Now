@@ -6,6 +6,12 @@ export type AuthError = {
   message: string;
 };
 
+// Hardcoded credentials for quick login (for demo/hackathon purposes)
+export const DEMO_CREDENTIALS = {
+  email: "demo@civicnow.dev",
+  password: "demo123456"
+};
+
 /**
  * Sign in a user with email and password
  * @param email User's email address
@@ -14,7 +20,13 @@ export type AuthError = {
  */
 export const signIn = async (email: string, password: string) => {
   try {
-    console.info("Login attempt with:", { email, password });
+    console.info("Login attempt with:", { email });
+    
+    // Quick login with demo account for hackathon
+    if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
+      console.log("Using demo credentials");
+    }
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
