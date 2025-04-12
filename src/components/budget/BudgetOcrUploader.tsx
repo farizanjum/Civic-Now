@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,35 +46,29 @@ const BudgetOcrUploader = ({ onReceiptProcessed }: { onReceiptProcessed: (data: 
     
     setIsUploading(true);
     
-    // Create FormData for the file upload
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("api_key", API_KEY);
-    
-    try {
-      // Backend API URL
-      const response = await fetch("/api/ocr", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error processing receipt: ${errorText}`);
-      }
-      
-      const data: OcrResponse = await response.json();
+    // Instead of real API call, use hardcoded data
+    setTimeout(() => {
+      // Hardcoded data that was requested
+      const hardcodedResponse: OcrResponse = {
+        merchant: "National Budget Office",
+        date: "2025-04-12",
+        amount: 14600000000,
+        items: [
+          { name: "Budget Line Item 1", price: 5000000000 },
+          { name: "Budget Line Item 2", price: 7500000000 },
+          { name: "Budget Line Item 3", price: 1000000000 },
+          { name: "Budget Line Item 4", price: 500000000 },
+          { name: "Budget Line Item 5", price: 600000000 }
+        ],
+        raw_text: "50,00,00,000rs\n75,00,00,000rs\n10,00,00,000rs\n5,00,00,000rs\n6,00,00,000rs\n1\n1\n1\n1\n1\n50,00,00,000rs\n75,00,00,000rs\n10,00,00,000rs\n5,00,00,000rs\n6,00,00,000rs\nSUBTOTAL\n1,46,00,00,000 rs\nTax\nTOTAL\n0%\n1,46,00,00,000 rs"
+      };
       
       toast.success("Receipt processed successfully!");
       
-      onReceiptProcessed(data);
+      onReceiptProcessed(hardcodedResponse);
       resetForm();
-      
-    } catch (error) {
-      console.error("Error processing receipt:", error);
-      toast.error(error instanceof Error ? error.message : "Error processing receipt. Please try again.");
       setIsUploading(false);
-    }
+    }, 2000); // Simulate processing delay
   };
 
   return (

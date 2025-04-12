@@ -1,30 +1,29 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from "recharts";
 
-// Mock data
+// Mock data with higher values
 const budgetData = {
-  totalBudget: 7500000, // 7.5 crore in rupees
-  spent: 3250000, // 3.25 crore in rupees
-  remaining: 4250000, // 4.25 crore in rupees
+  totalBudget: 75000000000, // 750 crore in rupees
+  spent: 32500000000, // 325 crore in rupees
+  remaining: 42500000000, // 425 crore in rupees
   categories: [
-    { name: "Infrastructure", value: 2500000 },
-    { name: "Education", value: 1500000 },
-    { name: "Healthcare", value: 1200000 },
-    { name: "Parks & Recreation", value: 800000 },
-    { name: "Public Safety", value: 1000000 },
-    { name: "Administration", value: 500000 },
+    { name: "Infrastructure", value: 25000000000 },
+    { name: "Education", value: 15000000000 },
+    { name: "Healthcare", value: 12000000000 },
+    { name: "Parks & Recreation", value: 8000000000 },
+    { name: "Public Safety", value: 10000000000 },
+    { name: "Administration", value: 5000000000 },
   ],
   monthlySpending: [
-    { month: "Jan", amount: 450000 },
-    { month: "Feb", amount: 520000 },
-    { month: "Mar", amount: 580000 },
-    { month: "Apr", amount: 620000 },
-    { month: "May", amount: 710000 },
-    { month: "Jun", amount: 370000 },
+    { month: "Jan", amount: 4500000000 },
+    { month: "Feb", amount: 5200000000 },
+    { month: "Mar", amount: 5800000000 },
+    { month: "Apr", amount: 6200000000 },
+    { month: "May", amount: 7100000000 },
+    { month: "Jun", amount: 3700000000 },
   ],
 };
 
