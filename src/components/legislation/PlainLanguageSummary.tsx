@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ThumbsUp, ThumbsDown, HelpCircle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent,
@@ -32,6 +34,7 @@ interface LegislationSummaryProps {
   status: "proposed" | "in_review" | "passed" | "rejected";
   date: string;
   category: string;
+  onTitleChange?: (title: string) => void;
 }
 
 const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
@@ -41,8 +44,10 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   impacts: initialImpacts,
   status,
   date,
-  category
+  category,
+  onTitleChange
 }) => {
+  const navigate = useNavigate();
   const [originalText, setOriginalText] = useState(initialOriginalText);
   const [plainSummary, setPlainSummary] = useState(initialPlainSummary);
   const [impacts, setImpacts] = useState(initialImpacts);
@@ -67,6 +72,27 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
     return cleanedText.replace(/\n{3,}/g, '\n\n').trim();
   };
 
+  const extractTitleFromText = (text: string): string => {
+    // Try to extract a title from the text
+    const lines = text.split('\n');
+    const possibleTitleLine = lines.find(line => 
+      line.includes("Act") && 
+      (line.includes("of 20") || line.includes("of 19"))
+    );
+    
+    if (possibleTitleLine) {
+      // Try to extract just the act name
+      const titleMatch = possibleTitleLine.match(/"([^"]+)"|'([^']+)'|([^,;:.]+\s+Act\s+of\s+\d{4})/);
+      if (titleMatch) {
+        const extractedTitle = titleMatch[1] || titleMatch[2] || titleMatch[3];
+        return extractedTitle.trim();
+      }
+      return possibleTitleLine.trim();
+    }
+    
+    return "Legislative Proposal";
+  };
+
   const generateSummary = async () => {
     if (!originalText.trim()) {
       toast.error("Please enter some legislative text to summarize");
@@ -76,6 +102,12 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
     setIsGenerating(true);
     
     try {
+      // Extract title from the text
+      const extractedTitle = extractTitleFromText(originalText);
+      if (onTitleChange) {
+        onTitleChange(extractedTitle);
+      }
+      
       const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -195,6 +227,32 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleShare = () => {
+    try {
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          text: plainSummary,
+          url: window.location.href,
+        })
+          .then(() => toast.success("Shared successfully"))
+          .catch((error) => console.log('Error sharing', error));
+      } else {
+        // Fallback for browsers that don't support navigator.share
+        navigator.clipboard.writeText(`${title}\n\n${plainSummary}\n\nView more at: ${window.location.href}`)
+          .then(() => toast.success("Content copied to clipboard for sharing"))
+          .catch(() => toast.error("Failed to copy to clipboard"));
+      }
+    } catch (error) {
+      console.error("Share error:", error);
+      toast.error("Unable to share content");
+    }
+  };
+
+  const handleFeedback = () => {
+    navigate('/feedback');
   };
 
   return (
@@ -318,10 +376,10 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       </CardContent>
       
       <CardFooter className="bg-civic-blue/5 flex justify-between">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={handleShare}>
           Share
         </Button>
-        <Button variant="default" size="sm">
+        <Button variant="default" size="sm" onClick={handleFeedback}>
           Provide Feedback
         </Button>
       </CardFooter>

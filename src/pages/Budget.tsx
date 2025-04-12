@@ -54,6 +54,7 @@ interface OcrResponse {
 const Budget = () => {
   const [processedReceipt, setProcessedReceipt] = useState<OcrResponse | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [legislationTitle, setLegislationTitle] = useState(sampleLegislationData.title);
 
   const handleReceiptProcessed = (data: OcrResponse) => {
     setProcessedReceipt(data);
@@ -80,6 +81,11 @@ const Budget = () => {
       default:
         break;
     }
+  };
+
+  // Handle title change from PlainLanguageSummary component
+  const handleTitleChange = (newTitle: string) => {
+    setLegislationTitle(newTitle);
   };
 
   return (
@@ -128,20 +134,21 @@ const Budget = () => {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-civic-blue">Legislation Impact</h2>
               <PlainLanguageSummary 
-                title={sampleLegislationData.title}
+                title={legislationTitle}
                 originalText={sampleLegislationData.originalText}
                 plainSummary={sampleLegislationData.plainSummary}
                 impacts={sampleLegislationData.impacts}
                 status={sampleLegislationData.status}
                 date={sampleLegislationData.date}
                 category={sampleLegislationData.category}
+                onTitleChange={handleTitleChange}
               />
             </div>
             
             {/* Impact Visualization */}
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-civic-blue">Community Impact</h2>
-              <ImpactVisualization />
+              <ImpactVisualization legislationTitle={legislationTitle} />
             </div>
           </div>
           

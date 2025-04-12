@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { 
   Card, 
@@ -11,7 +11,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChartPie, Users, MapPin, Filter } from 'lucide-react';
+import { ChartPie, Users, MapPin, Filter, RefreshCw } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Types for impact data
 interface DemographicData {
@@ -41,30 +43,61 @@ interface ImpactData {
   neighborhoods: NeighborhoodData[];
 }
 
-// Sample data for visualization
+// Create demographic color map for consistency
+const demographicColors = {
+  age: {
+    "18-24": "#3498db",
+    "25-34": "#2ecc71",
+    "35-44": "#f1c40f",
+    "45-60": "#e67e22",
+    "60+": "#e74c3c"
+  },
+  income: {
+    "Low Income": "#9b59b6",
+    "Middle Income": "#1abc9c",
+    "High Income": "#34495e"
+  },
+  occupation: {
+    "Students": "#d35400",
+    "Service Sector": "#27ae60",
+    "IT/Tech": "#3498db",
+    "Business": "#f39c12",
+    "Retired": "#7f8c8d",
+    "Agriculture": "#16a085",
+    "Healthcare": "#8e44ad",
+    "Government": "#2c3e50"
+  },
+  neighborhoods: {
+    "Urban": "#2980b9",
+    "Suburban": "#27ae60", 
+    "Rural": "#f39c12"
+  }
+};
+
+// Sample data
 const sampleImpactData: ImpactData = {
   id: "impact-001",
   title: "Green Space Development Plan",
   category: "Environment",
   demographics: {
     age: [
-      { name: "18-24", value: 15, color: "#3498db" },
-      { name: "25-34", value: 30, color: "#2ecc71" },
-      { name: "35-44", value: 25, color: "#f1c40f" },
-      { name: "45-60", value: 20, color: "#e67e22" },
-      { name: "60+", value: 10, color: "#e74c3c" }
+      { name: "18-24", value: 15, color: demographicColors.age["18-24"] },
+      { name: "25-34", value: 30, color: demographicColors.age["25-34"] },
+      { name: "35-44", value: 25, color: demographicColors.age["35-44"] },
+      { name: "45-60", value: 20, color: demographicColors.age["45-60"] },
+      { name: "60+", value: 10, color: demographicColors.age["60+"] }
     ],
     income: [
-      { name: "Low Income", value: 25, color: "#9b59b6" },
-      { name: "Middle Income", value: 45, color: "#1abc9c" },
-      { name: "High Income", value: 30, color: "#34495e" }
+      { name: "Low Income", value: 25, color: demographicColors.income["Low Income"] },
+      { name: "Middle Income", value: 45, color: demographicColors.income["Middle Income"] },
+      { name: "High Income", value: 30, color: demographicColors.income["High Income"] }
     ],
     occupation: [
-      { name: "Students", value: 15, color: "#d35400" },
-      { name: "Service Sector", value: 30, color: "#27ae60" },
-      { name: "IT/Tech", value: 25, color: "#3498db" },
-      { name: "Business", value: 20, color: "#f39c12" },
-      { name: "Retired", value: 10, color: "#7f8c8d" }
+      { name: "Students", value: 15, color: demographicColors.occupation["Students"] },
+      { name: "Service Sector", value: 30, color: demographicColors.occupation["Service Sector"] },
+      { name: "IT/Tech", value: 25, color: demographicColors.occupation["IT/Tech"] },
+      { name: "Business", value: 20, color: demographicColors.occupation["Business"] },
+      { name: "Retired", value: 10, color: demographicColors.occupation["Retired"] }
     ]
   },
   neighborhoods: [
@@ -111,9 +144,329 @@ const sampleImpactData: ImpactData = {
   ]
 };
 
-const ImpactVisualization: React.FC = () => {
+// Define neighborhoods by type for the impact generator
+const neighborhoodsByType = {
+  urban: ["Indiranagar", "Koramangala", "Jayanagar", "Malleshwaram", "Basavanagudi", "MG Road"],
+  suburban: ["Whitefield", "Electronic City", "Marathahalli", "HSR Layout", "Hebbal", "JP Nagar"],
+  rural: ["Doddaballapur", "Hoskote", "Yelahanka", "Attibele", "Sarjapur", "Devanahalli"]
+};
+
+interface ImpactVisualizationProps {
+  legislationTitle?: string;
+}
+
+const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTitle = "Green Space Development Plan" }) => {
   const [demographicFilter, setDemographicFilter] = useState<'age' | 'income' | 'occupation'>('age');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>("all");
+  const [impactData, setImpactData] = useState<ImpactData>(sampleImpactData);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [category, setCategory] = useState("Environment");
+  
+  // Mistral API Key
+  const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
+  
+  // Generate new impact data based on legislation title
+  const generateImpactData = async () => {
+    if (!legislationTitle) return;
+    
+    setIsGenerating(true);
+    
+    try {
+      // Get the category from the title
+      const categoryResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MISTRAL_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "mistral-large-latest",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert in categorizing legislation. Given a legislation title, categorize it into one of the following categories: Environment, Healthcare, Education, Infrastructure, Transportation, Safety, Economy, Housing, Technology. Return ONLY the category name, nothing else."
+            },
+            {
+              role: "user",
+              content: `Categorize this legislation: "${legislationTitle}"`
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 20
+        })
+      });
+      
+      let newCategory = "Environment"; // Default
+      
+      if (categoryResponse.ok) {
+        const categoryData = await categoryResponse.json();
+        const categoryText = categoryData.choices[0].message.content.trim();
+        if (categoryText) {
+          // Extract just the category name if there's additional text
+          const categoryMatch = categoryText.match(/\b(Environment|Healthcare|Education|Infrastructure|Transportation|Safety|Economy|Housing|Technology)\b/i);
+          if (categoryMatch) {
+            newCategory = categoryMatch[0];
+          }
+        }
+      }
+      
+      setCategory(newCategory);
+      
+      // Generate demographic impact distributions
+      const demographicsResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MISTRAL_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "mistral-large-latest",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert data analyst. Generate realistic demographic impact percentages for a piece of legislation. Output should be in valid JSON format with three sets: age groups, income levels, and occupations, each with percentage values. The sum of percentages in each set should equal 100."
+            },
+            {
+              role: "user",
+              content: `Generate demographic impact data for legislation titled "${legislationTitle}" in the category of "${newCategory}". Return a JSON object with three properties: "age" (with keys "18-24", "25-34", "35-44", "45-60", "60+"), "income" (with keys "Low Income", "Middle Income", "High Income"), and "occupation" (with keys "Students", "Service Sector", "IT/Tech", "Business", "Retired"). Each key should have a value that represents a percentage impact, and these percentages should sum to 100 within each category.`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        })
+      });
+      
+      if (demographicsResponse.ok) {
+        const demographicsData = await demographicsResponse.json();
+        const demographicsText = demographicsData.choices[0].message.content;
+        
+        try {
+          // Try to parse the JSON from the response
+          const jsonMatch = demographicsText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const demographicsJson = JSON.parse(jsonMatch[0]);
+            
+            // Create new demographic data with the parsed values
+            const newDemographics = {
+              age: Object.entries(demographicsJson.age || {}).map(([name, value]) => ({
+                name,
+                value: Number(value),
+                color: demographicColors.age[name] || `#${Math.floor(Math.random()*16777215).toString(16)}`
+              })),
+              income: Object.entries(demographicsJson.income || {}).map(([name, value]) => ({
+                name,
+                value: Number(value),
+                color: demographicColors.income[name] || `#${Math.floor(Math.random()*16777215).toString(16)}`
+              })),
+              occupation: Object.entries(demographicsJson.occupation || {}).map(([name, value]) => ({
+                name,
+                value: Number(value),
+                color: demographicColors.occupation[name] || `#${Math.floor(Math.random()*16777215).toString(16)}`
+              }))
+            };
+            
+            // Generate neighborhood impact data
+            const neighborhoodsResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${MISTRAL_API_KEY}`
+              },
+              body: JSON.stringify({
+                model: "mistral-large-latest",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are an expert in urban planning and demographic analysis. For the given legislation, generate impact scores for different neighborhoods in Bengaluru, India."
+                  },
+                  {
+                    role: "user",
+                    content: `Generate impact data for legislation titled "${legislationTitle}" in the category "${newCategory}" for these Bengaluru neighborhoods: Indiranagar, Koramangala, HSR Layout, Whitefield. For each neighborhood, provide: 1) An impact level score from 1-10, 2) An estimated population size between 80,000-200,000, and 3) Demographic percentages for "Young Adults", "Families", and "Seniors" (should sum to 100%). Return as JSON.`
+                  }
+                ],
+                temperature: 0.7,
+                max_tokens: 600
+              })
+            });
+            
+            if (neighborhoodsResponse.ok) {
+              const neighborhoodsData = await neighborhoodsResponse.json();
+              const neighborhoodsText = neighborhoodsData.choices[0].message.content;
+              
+              try {
+                const neighborhoodsJsonMatch = neighborhoodsText.match(/\{[\s\S]*\}/);
+                if (neighborhoodsJsonMatch) {
+                  const neighborhoodsJson = JSON.parse(neighborhoodsJsonMatch[0]);
+                  
+                  // Create new neighborhoods array
+                  const newNeighborhoods = Object.entries(neighborhoodsJson).map(([name, data]: [string, any]) => ({
+                    name,
+                    impactLevel: Number(data.impactLevel) || Math.floor(Math.random() * 10) + 1,
+                    population: Number(data.population) || Math.floor(Math.random() * 100000) + 80000,
+                    demographics: data.demographics || {
+                      "Young Adults": Math.floor(Math.random() * 40) + 20,
+                      "Families": Math.floor(Math.random() * 40) + 30,
+                      "Seniors": Math.floor(Math.random() * 30) + 10
+                    }
+                  }));
+                  
+                  // Update the impact data
+                  setImpactData({
+                    id: `impact-${Date.now()}`,
+                    title: legislationTitle,
+                    category: newCategory,
+                    demographics: newDemographics,
+                    neighborhoods: newNeighborhoods
+                  });
+                  
+                  toast.success("Impact data generated successfully!");
+                } else {
+                  throw new Error("Could not parse neighborhoods JSON");
+                }
+              } catch (error) {
+                console.error("Error parsing neighborhoods data:", error);
+                // Use fallback neighborhood data
+                generateFallbackNeighborhoods(legislationTitle, newCategory, newDemographics);
+              }
+            } else {
+              // Use fallback neighborhood data
+              generateFallbackNeighborhoods(legislationTitle, newCategory, newDemographics);
+            }
+          } else {
+            throw new Error("Could not find JSON in response");
+          }
+        } catch (error) {
+          console.error("Error parsing demographics data:", error);
+          // Use fallback data
+          generateFallbackData(legislationTitle, newCategory);
+        }
+      } else {
+        // Use fallback data
+        generateFallbackData(legislationTitle, newCategory);
+      }
+    } catch (error) {
+      console.error("Error generating impact data:", error);
+      toast.error("Failed to generate impact data. Using sample data instead.");
+      // Use sample data with the new title
+      setImpactData({
+        ...sampleImpactData,
+        title: legislationTitle,
+        category: category
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  // Generate fallback demographic data
+  const generateFallbackData = (title: string, category: string) => {
+    // Create random distributions that sum to 100
+    const generateDistribution = (count: number) => {
+      const values = Array(count).fill(0).map(() => Math.random());
+      const sum = values.reduce((a, b) => a + b, 0);
+      return values.map(v => Math.round((v / sum) * 100));
+    };
+    
+    const ageValues = generateDistribution(5);
+    const incomeValues = generateDistribution(3);
+    const occupationValues = generateDistribution(5);
+    
+    const newDemographics = {
+      age: [
+        { name: "18-24", value: ageValues[0], color: demographicColors.age["18-24"] },
+        { name: "25-34", value: ageValues[1], color: demographicColors.age["25-34"] },
+        { name: "35-44", value: ageValues[2], color: demographicColors.age["35-44"] },
+        { name: "45-60", value: ageValues[3], color: demographicColors.age["45-60"] },
+        { name: "60+", value: ageValues[4], color: demographicColors.age["60+"] }
+      ],
+      income: [
+        { name: "Low Income", value: incomeValues[0], color: demographicColors.income["Low Income"] },
+        { name: "Middle Income", value: incomeValues[1], color: demographicColors.income["Middle Income"] },
+        { name: "High Income", value: incomeValues[2], color: demographicColors.income["High Income"] }
+      ],
+      occupation: [
+        { name: "Students", value: occupationValues[0], color: demographicColors.occupation["Students"] },
+        { name: "Service Sector", value: occupationValues[1], color: demographicColors.occupation["Service Sector"] },
+        { name: "IT/Tech", value: occupationValues[2], color: demographicColors.occupation["IT/Tech"] },
+        { name: "Business", value: occupationValues[3], color: demographicColors.occupation["Business"] },
+        { name: "Retired", value: occupationValues[4], color: demographicColors.occupation["Retired"] }
+      ]
+    };
+    
+    // Generate fallback neighborhoods
+    generateFallbackNeighborhoods(title, category, newDemographics);
+  };
+  
+  // Generate fallback neighborhood data
+  const generateFallbackNeighborhoods = (title: string, category: string, demographics: any) => {
+    const neighborhoods = [
+      {
+        name: "Indiranagar",
+        impactLevel: Math.floor(Math.random() * 5) + 5, // 5-10
+        population: Math.floor(Math.random() * 50000) + 100000, // 100k-150k
+        demographics: {
+          "Young Adults": Math.floor(Math.random() * 20) + 30, // 30-50%
+          "Families": Math.floor(Math.random() * 20) + 30, // 30-50%
+          "Seniors": Math.floor(Math.random() * 20) + 10 // 10-30%
+        }
+      },
+      {
+        name: "Koramangala",
+        impactLevel: Math.floor(Math.random() * 5) + 5,
+        population: Math.floor(Math.random() * 50000) + 120000,
+        demographics: {
+          "Young Adults": Math.floor(Math.random() * 25) + 40, // 40-65%
+          "Families": Math.floor(Math.random() * 20) + 25, // 25-45%
+          "Seniors": Math.floor(Math.random() * 15) + 5 // 5-20%
+        }
+      },
+      {
+        name: "HSR Layout",
+        impactLevel: Math.floor(Math.random() * 4) + 4, // 4-8
+        population: Math.floor(Math.random() * 40000) + 90000,
+        demographics: {
+          "Young Adults": Math.floor(Math.random() * 20) + 35, // 35-55%
+          "Families": Math.floor(Math.random() * 25) + 35, // 35-60%
+          "Seniors": Math.floor(Math.random() * 15) + 5 // 5-20%
+        }
+      },
+      {
+        name: "Whitefield",
+        impactLevel: Math.floor(Math.random() * 5) + 5, // 5-10
+        population: Math.floor(Math.random() * 70000) + 150000,
+        demographics: {
+          "Young Adults": Math.floor(Math.random() * 15) + 25, // 25-40%
+          "Families": Math.floor(Math.random() * 15) + 45, // 45-60%
+          "Seniors": Math.floor(Math.random() * 15) + 10 // 10-25%
+        }
+      }
+    ];
+    
+    // Normalize demographic percentages to ensure they sum to 100%
+    neighborhoods.forEach(n => {
+      const sum = Object.values(n.demographics).reduce((a, b) => a + b, 0);
+      for (const key in n.demographics) {
+        n.demographics[key] = Math.round((n.demographics[key] / sum) * 100);
+      }
+    });
+    
+    setImpactData({
+      id: `impact-${Date.now()}`,
+      title: title,
+      category: category,
+      demographics: demographics,
+      neighborhoods: neighborhoods
+    });
+    
+    toast.success("Impact data generated using estimates");
+  };
+  
+  // Effect to update impact data when legislation title changes
+  useEffect(() => {
+    if (legislationTitle && legislationTitle !== impactData.title) {
+      generateImpactData();
+    }
+  }, [legislationTitle]);
   
   // Simple custom tooltip for the charts
   const CustomTooltip = ({ active, payload }: any) => {
@@ -143,10 +496,26 @@ const ImpactVisualization: React.FC = () => {
             <ChartPie className="mr-2 h-5 w-5" /> 
             Impact Visualization
           </CardTitle>
-          <Badge variant="outline">{sampleImpactData.category}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{impactData.category}</Badge>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={generateImpactData}
+              disabled={isGenerating}
+              className="flex items-center text-xs"
+            >
+              {isGenerating ? (
+                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              {isGenerating ? "Analyzing..." : "Analyze Impact"}
+            </Button>
+          </div>
         </div>
         <CardDescription>
-          {sampleImpactData.title}
+          {impactData.title}
         </CardDescription>
       </CardHeader>
       
@@ -189,7 +558,7 @@ const ImpactVisualization: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={sampleImpactData.demographics[demographicFilter]}
+                    data={impactData.demographics[demographicFilter]}
                     cx="50%"
                     cy="50%"
                     labelLine={true}
@@ -198,7 +567,7 @@ const ImpactVisualization: React.FC = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {sampleImpactData.demographics[demographicFilter].map((entry, index) => (
+                    {impactData.demographics[demographicFilter].map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -211,7 +580,7 @@ const ImpactVisualization: React.FC = () => {
             <div className="mt-4 bg-blue-50 p-4 rounded-md">
               <h4 className="font-medium text-civic-blue mb-2">What This Means</h4>
               <p className="text-sm">
-                This visualization shows how different demographic groups may be affected by the proposed legislation. 
+                This visualization shows how different demographic groups may be affected by {impactData.title}. 
                 The larger the segment, the more significant the impact on that group.
               </p>
             </div>
@@ -232,7 +601,7 @@ const ImpactVisualization: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Neighborhoods</SelectItem>
-                    {sampleImpactData.neighborhoods.map((neighborhood) => (
+                    {impactData.neighborhoods.map((neighborhood) => (
                       <SelectItem key={neighborhood.name} value={neighborhood.name}>
                         {neighborhood.name}
                       </SelectItem>
@@ -244,7 +613,7 @@ const ImpactVisualization: React.FC = () => {
             
             {selectedNeighborhood === "all" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sampleImpactData.neighborhoods.map((neighborhood) => (
+                {impactData.neighborhoods.map((neighborhood) => (
                   <Card key={neighborhood.name} className="overflow-hidden">
                     <CardHeader className="py-3 px-4">
                       <div className="flex justify-between items-center">
@@ -281,7 +650,7 @@ const ImpactVisualization: React.FC = () => {
               </div>
             ) : (
               <div>
-                {sampleImpactData.neighborhoods
+                {impactData.neighborhoods
                   .filter(n => n.name === selectedNeighborhood)
                   .map((neighborhood) => (
                     <div key={neighborhood.name} className="space-y-4">
@@ -332,7 +701,7 @@ const ImpactVisualization: React.FC = () => {
                             <h4 className="font-medium text-amber-800 mb-2">Impact Analysis</h4>
                             <p className="text-sm">
                               {neighborhood.name} will experience a {neighborhood.impactLevel >= 7 ? 'significant' : 'moderate'} impact 
-                              from this legislation. The {Object.entries(neighborhood.demographics)
+                              from {impactData.title}. The {Object.entries(neighborhood.demographics)
                                 .sort((a, b) => b[1] - a[1])[0][0]} demographic 
                               (making up {Object.entries(neighborhood.demographics).sort((a, b) => b[1] - a[1])[0][1]}% of the population) 
                               will be most affected.
