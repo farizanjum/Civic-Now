@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { signIn, signOut, getCurrentUser } from "./auth";
 
 interface User {
   id: string;
@@ -35,16 +36,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check for existing session on initial load
   useEffect(() => {
-    const checkSession = () => {
-      const storedUser = localStorage.getItem("civicnow_user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const checkSession = async () => {
+      setLoading(true);
+      try {
+        // Check localStorage first for demo user
+        const storedUser = localStorage.getItem("civicnow_user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+          setLoading(false);
+          return;
+        }
+        
+        // Then try to get user from auth system
+        const currentUser = await getCurrentUser();
+        if (currentUser) {
+          const userData = {
+            id: currentUser.id,
+            email: currentUser.email || "",
+            name: currentUser.user_metadata?.full_name,
+            role: currentUser.app_metadata?.role || "user"
+          };
+          setUser(userData);
+          // Store in localStorage for persistence
+          localStorage.setItem("civicnow_user", JSON.stringify(userData));
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkSession();
-    console.info("Supabase auth event: INITIAL_SESSION");
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -62,12 +85,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         navigate("/");
-      } else {
+        return;
+      }
+      
+      // Normal login with auth system
+      const result = await signIn(email, password);
+      if (result.user) {
+        const userData = {
+          id: result.user.id,
+          email: result.user.email || "",
+          name: result.user.user_metadata?.full_name,
+          role: result.user.app_metadata?.role || "user"
+        };
+        setUser(userData);
+        localStorage.setItem("civicnow_user", JSON.stringify(userData));
+        
         toast({
-          title: "Login failed",
-          description: "For demo, use demo@example.com / password",
-          variant: "destructive",
+          title: "Login successful",
+          description: "Welcome back!",
         });
+        
+        navigate("/");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -102,14 +140,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("civicnow_user");
-    setUser(null);
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    navigate("/login");
+  const logout = async () => {
+    try {
+      await signOut();
+      localStorage.removeItem("civicnow_user");
+      setUser(null);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force logout even if signOut fails
+      localStorage.removeItem("civicnow_user");
+      setUser(null);
+      navigate("/login");
+    }
   };
 
   return (

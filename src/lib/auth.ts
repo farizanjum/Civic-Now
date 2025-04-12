@@ -7,8 +7,8 @@ export type AuthError = {
 
 // Hardcoded credentials for quick login (for demo/hackathon purposes)
 export const DEMO_CREDENTIALS = {
-  email: "demo@civicnow.dev",
-  password: "demo123456"
+  email: "demo@example.com",
+  password: "password"
 };
 
 /**
@@ -140,6 +140,7 @@ export const signOut = async () => {
       // Clear demo user data
       localStorage.removeItem('civicnow_demo_user');
       localStorage.removeItem('civicnow_demo_session');
+      localStorage.removeItem('civicnow_user'); // Also remove from regular storage
       
       toast({
         title: "Signed Out",
@@ -190,6 +191,20 @@ export const getCurrentSession = async () => {
       return JSON.parse(demoSession);
     }
     
+    // Check for civicnow_user in localStorage (backup mechanism)
+    const storedUser = localStorage.getItem('civicnow_user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          user_metadata: { full_name: user.name },
+          app_metadata: { role: user.role || 'user' }
+        }
+      };
+    }
+    
     // Otherwise use Supabase
     const { data, error } = await supabase.auth.getSession();
     
@@ -215,6 +230,18 @@ export const getCurrentUser = async () => {
     const demoUser = localStorage.getItem('civicnow_demo_user');
     if (demoUser) {
       return JSON.parse(demoUser);
+    }
+    
+    // Check for civicnow_user in localStorage (backup mechanism)
+    const storedUser = localStorage.getItem('civicnow_user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      return {
+        id: user.id,
+        email: user.email,
+        user_metadata: { full_name: user.name },
+        app_metadata: { role: user.role || 'user' }
+      };
     }
     
     // Otherwise use Supabase

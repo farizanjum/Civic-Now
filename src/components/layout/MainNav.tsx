@@ -49,9 +49,12 @@ const MainNav = () => {
     }
   ];
 
-  // Only show Admin link for authenticated users
-  if (user) {
-    navItems.push({
+  // Create a new array with admin link for authenticated users
+  const displayNavItems = [...navItems];
+  
+  // Only show Admin link for authenticated users with admin role
+  if (user && user.role === "admin") {
+    displayNavItems.push({
       title: "Admin",
       href: "/admin",
       icon: Settings,
@@ -60,7 +63,7 @@ const MainNav = () => {
 
   return (
     <nav className="flex items-center space-x-4 lg:space-x-6">
-      {navItems.map((item) => {
+      {displayNavItems.map((item) => {
         const isActive = location.pathname === item.href || 
                          (item.href !== '/' && location.pathname.startsWith(item.href));
         
