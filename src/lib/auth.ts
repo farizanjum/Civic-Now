@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,11 +21,41 @@ export const signIn = async (email: string, password: string) => {
   try {
     console.info("Login attempt with:", { email });
     
-    // Quick login with demo account for hackathon
+    // For demo purposes: If using demo credentials, bypass Supabase authentication
     if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
-      console.log("Using demo credentials");
+      console.log("Using demo credentials - bypassing Supabase auth");
+      
+      // Create a mock user/session for demo purposes
+      const mockUser = {
+        id: 'demo-user-id',
+        email: DEMO_CREDENTIALS.email,
+        user_metadata: {
+          full_name: 'Demo User',
+        },
+        app_metadata: {
+          role: 'admin' // Give admin role for full access
+        }
+      };
+      
+      const mockSession = {
+        access_token: 'demo-token',
+        refresh_token: 'demo-refresh-token',
+        user: mockUser
+      };
+      
+      toast({
+        title: "Welcome to Demo Mode!",
+        description: "You've successfully signed in with demo credentials.",
+      });
+      
+      // Store mock session in localStorage to simulate persistent auth
+      localStorage.setItem('civicnow_demo_user', JSON.stringify(mockUser));
+      localStorage.setItem('civicnow_demo_session', JSON.stringify(mockSession));
+      
+      return { user: mockUser, session: mockSession };
     }
     
+    // Normal authentication flow with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -106,6 +135,21 @@ export const signUp = async (email: string, password: string) => {
  */
 export const signOut = async () => {
   try {
+    // Check if user is demo user first
+    if (localStorage.getItem('civicnow_demo_user')) {
+      // Clear demo user data
+      localStorage.removeItem('civicnow_demo_user');
+      localStorage.removeItem('civicnow_demo_session');
+      
+      toast({
+        title: "Signed Out",
+        description: "You've been successfully signed out of demo mode.",
+      });
+      
+      return { success: true };
+    }
+    
+    // Regular sign out with Supabase
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -140,6 +184,13 @@ export const signOut = async () => {
  */
 export const getCurrentSession = async () => {
   try {
+    // Check for demo session first
+    const demoSession = localStorage.getItem('civicnow_demo_session');
+    if (demoSession) {
+      return JSON.parse(demoSession);
+    }
+    
+    // Otherwise use Supabase
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -160,6 +211,13 @@ export const getCurrentSession = async () => {
  */
 export const getCurrentUser = async () => {
   try {
+    // Check for demo user first
+    const demoUser = localStorage.getItem('civicnow_demo_user');
+    if (demoUser) {
+      return JSON.parse(demoUser);
+    }
+    
+    // Otherwise use Supabase
     const { data, error } = await supabase.auth.getUser();
     
     if (error) {
