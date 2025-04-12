@@ -5,7 +5,7 @@
 
 ## 🏆 Hackathon Submission
 
-This project is a submission for the [Hackathon Name] hackathon. CivicNow is a digital civic engagement platform that bridges the gap between local governments and their communities, making democratic participation more accessible, inclusive, and effective.
+This project is a submission for the xto10x by Masai hackathon. CivicNow is a digital civic engagement platform that bridges the gap between local governments and their communities, making democratic participation more accessible, inclusive, and effective.
 
 ## 🌟 Vision & Mission
 
@@ -225,10 +225,10 @@ CivicNow implements several security measures:
 
 ## 👥 Team
 
-- [Your Name] - Full Stack Developer
-- [Team Member 2] - UX/UI Designer
-- [Team Member 3] - Backend Developer
-- [Team Member 4] - Product Manager
+- Fariz Anjum - Full Stack Developer
+- Fariz Anjum - UX/UI Designer
+- Rahul - Backend Developer
+- Abhinav - Product Manager
 
 ## 📄 License
 
