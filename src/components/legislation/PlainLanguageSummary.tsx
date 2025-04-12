@@ -51,6 +51,22 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   // Use a hardcoded API key instead of prompting the user
   const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
+  // Helper function to clean markdown formatting
+  const cleanMarkdown = (text: string): string => {
+    // Remove markdown headings and bold formatting
+    const withoutAsterisks = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+    const withoutHeadings = withoutAsterisks.replace(/#+\s+(.*?)\n/g, '$1\n');
+    
+    // Remove Q&A style formatting often present in AI responses
+    const withoutQA = withoutHeadings.replace(/\*?(What is|When will|How does|Why is|Who will).*?\?/g, '');
+    
+    // Remove any remaining asterisks
+    const cleanedText = withoutQA.replace(/\*/g, '');
+    
+    // Normalize whitespace
+    return cleanedText.replace(/\n{3,}/g, '\n\n').trim();
+  };
+
   const generateSummary = async () => {
     if (!originalText.trim()) {
       toast.error("Please enter some legislative text to summarize");
@@ -71,7 +87,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT use any markdown formatting like asterisks or bold text in your response. Format your output as well-organized plain text with proper paragraphs and spacing."
+              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT use any markdown formatting, headings, bold text, or Q&A format in your response. Just provide a simple, straightforward paragraph explaining the legislation."
             },
             {
               role: "user",
@@ -90,8 +106,8 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       const data = await response.json();
       let generatedSummary = data.choices[0].message.content;
       
-      // Clean up the summary by removing any markdown formatting
-      generatedSummary = generatedSummary.replace(/\*\*/g, '');
+      // Clean up the summary
+      generatedSummary = cleanMarkdown(generatedSummary);
       
       // Generate impacts
       const impactsResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -105,11 +121,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. For each category, provide 3-5 bullet points that are EXTREMELY concise (max 1-2 lines each). DO NOT use any markdown formatting, asterisks, or bold text. Do not use prefixes like 'Positive:', just list the impacts directly. Keep each point very brief and specific."
+              content: "You are an expert in Indian governance and policy analysis. Analyze the given legislative text and create 3 SHORT lists of impacts: 'Positive Impacts', 'Potential Concerns', and 'Uncertain Effects'. Each list should contain EXACTLY 3-4 points. Each point MUST be ONLY 1-2 lines long, extremely concise, and should NOT use any markdown formatting. Output format should be plain text with each category clearly labeled."
             },
             {
               role: "user",
-              content: `Analyze the following legislative text and provide extremely short, concise impacts (max 1-2 lines each) with NO markdown formatting:\n\n${originalText}`
+              content: `Analyze this legislation and provide VERY brief impacts (max 1-2 lines each, NO markdown):\n\n${originalText}`
             }
           ],
           temperature: 0.4,
@@ -125,7 +141,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       let impactsContent = impactsData.choices[0].message.content;
       
       // Clean up any markdown in the impacts content
-      impactsContent = impactsContent.replace(/\*\*/g, '');
+      impactsContent = cleanMarkdown(impactsContent);
       
       // Parse the impacts from the AI response
       const positiveRegex = /Positive Impacts:[\s\S]*?(?=Potential Concerns:|$)/i;
@@ -138,16 +154,36 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       
       const extractBulletPoints = (text) => {
         if (!text) return [];
-        // Clean up any markdown formatting and extract the bullet points
-        const cleanedText = text.replace(/\*\*/g, '').replace(/^\s*positive impacts:?\s*/i, '');
-        const bulletPoints = cleanedText.split(/\n-|\n•|\n\d+\.|\n/).filter(Boolean);
-        return bulletPoints.map(point => point.trim()).filter(point => point);
+        
+        // Remove the category label
+        let cleanedText = text.replace(/^(Positive Impacts|Potential Concerns|Uncertain Effects):\s*/i, '').trim();
+        
+        // Extract individual points using various bullet point styles and numbering
+        const pointPatterns = [
+          /^\s*\d+\.\s*(.*)/gm,  // Numbered items: "1. Item text"
+          /^\s*-\s*(.*)/gm,      // Dash bullets: "- Item text"
+          /^\s*•\s*(.*)/gm,      // Bullet points: "• Item text"
+          /^\s*\*\s*(.*)/gm,     // Asterisk bullets: "* Item text"
+          /^\s*([^\n]+)/gm       // Fallback: any line with content
+        ];
+        
+        for (const pattern of pointPatterns) {
+          const matches = [...cleanedText.matchAll(pattern)];
+          if (matches.length > 0) {
+            return matches.map(match => match[1].trim()).filter(Boolean);
+          }
+        }
+        
+        // If no patterns matched, split by newlines as last resort
+        return cleanedText.split('\n')
+          .map(line => line.trim())
+          .filter(Boolean);
       };
       
       const newImpacts = {
-        positive: positiveMatch ? extractBulletPoints(positiveMatch[0]) : [],
-        negative: negativeMatch ? extractBulletPoints(negativeMatch[0]) : [],
-        uncertain: uncertainMatch ? extractBulletPoints(uncertainMatch[0]) : []
+        positive: positiveMatch ? extractBulletPoints(positiveMatch[0]).slice(0, 4) : [],
+        negative: negativeMatch ? extractBulletPoints(negativeMatch[0]).slice(0, 4) : [],
+        uncertain: uncertainMatch ? extractBulletPoints(uncertainMatch[0]).slice(0, 4) : []
       };
       
       setPlainSummary(generatedSummary);
