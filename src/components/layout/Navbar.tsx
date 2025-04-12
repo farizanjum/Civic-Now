@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ const Navbar = () => {
             <Link to="/legislation" className="nav-link">Legislation</Link>
             <Link to="/voting" className="nav-link">Community Voting</Link>
             <Link to="/initiatives" className="nav-link">Initiatives</Link>
-            <Link to="/budget" className="nav-link">Budget Tracking</Link>
+            <Link to="/budget" className="nav-link">Civic Impact</Link>
             <Link to="/feedback" className="nav-link">Feedback</Link>
           </div>
 
@@ -69,7 +68,7 @@ const Navbar = () => {
                 Initiatives
               </Link>
               <Link to="/budget" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
-                Budget Tracking
+                Civic Impact
               </Link>
               <Link to="/feedback" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
                 Feedback
