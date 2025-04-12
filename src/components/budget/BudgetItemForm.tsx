@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronsUpDown, ChevronRight, ChevronDown, Plus, Trash2 } from "lucide-react";
@@ -20,7 +20,20 @@ type BudgetItem = {
   notes?: string;
 };
 
-const BudgetItemForm = ({ onSave }: { onSave?: (categories: BudgetCategory[]) => void }) => {
+interface InitialData {
+  amount: number;
+  date: string;
+  merchant: string;
+  items: Array<{ name: string; price: number }>;
+  rawText: string;
+}
+
+interface BudgetItemFormProps {
+  onSave?: (categories: BudgetCategory[]) => void;
+  initialData?: InitialData;
+}
+
+const BudgetItemForm = ({ onSave, initialData }: BudgetItemFormProps) => {
   // Initial categories with some sample data
   const [categories, setCategories] = useState<BudgetCategory[]>([
     {
@@ -72,6 +85,30 @@ const BudgetItemForm = ({ onSave }: { onSave?: (categories: BudgetCategory[]) =>
       ],
     },
   ]);
+
+  // Process initialData if provided
+  useEffect(() => {
+    if (initialData) {
+      // Create a category for the receipt data
+      const newCategory: BudgetCategory = {
+        id: `c${Date.now()}`,
+        name: initialData.merchant || "Receipt Items",
+        isExpanded: true,
+        items: initialData.items.map((item, index) => ({
+          id: `receipt-${index}`,
+          name: item.name,
+          estimated: item.price,
+          actual: item.price,
+          notes: `From receipt dated ${initialData.date}`
+        }))
+      };
+      
+      setCategories(prevCategories => [...prevCategories, newCategory]);
+      
+      // Show a toast notification
+      toast.info(`Added ${initialData.items.length} items from receipt`);
+    }
+  }, [initialData]);
 
   // Add a new budget category
   const addCategory = () => {
@@ -259,13 +296,13 @@ const BudgetItemForm = ({ onSave }: { onSave?: (categories: BudgetCategory[]) =>
                     </div>
                   </td>
                   <td className="p-3 text-right font-medium">
-                    {category.items.reduce((sum, item) => sum + item.estimated, 0).toLocaleString('en-IN')}
+                    ₹{category.items.reduce((sum, item) => sum + item.estimated, 0).toLocaleString('en-IN')}
                   </td>
                   <td className="p-3 text-right font-medium">
-                    {category.items.reduce((sum, item) => sum + item.actual, 0).toLocaleString('en-IN')}
+                    ₹{category.items.reduce((sum, item) => sum + item.actual, 0).toLocaleString('en-IN')}
                   </td>
                   <td className="p-3 text-right font-medium">
-                    {(
+                    ₹{(
                       category.items.reduce((sum, item) => sum + item.estimated, 0) -
                       category.items.reduce((sum, item) => sum + item.actual, 0)
                     ).toLocaleString('en-IN')}
