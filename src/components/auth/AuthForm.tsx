@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AtSign, Lock, UserPlus, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 const AuthForm = () => {
   const [activeTab, setActiveTab] = useState("login");
@@ -15,26 +17,30 @@ const AuthForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would call an authentication API
-      console.log("Login attempt with:", { email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       toast({
         title: "Sign In Successful",
         description: "Welcome back to CivicNow!"
       });
-    } catch (error) {
+      
+      navigate("/");
+    } catch (error: any) {
       toast({
         title: "Sign In Failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Please check your credentials and try again.",
         variant: "destructive"
       });
     } finally {
@@ -47,20 +53,27 @@ const AuthForm = () => {
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would call an authentication API
-      console.log("Signup attempt with:", { email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       toast({
         title: "Account Created",
-        description: "Welcome to CivicNow! Let's set up your profile."
+        description: "Please check your email to confirm your account."
       });
-    } catch (error) {
+      
+      // Switch to login tab
+      setActiveTab("login");
+    } catch (error: any) {
       toast({
         title: "Sign Up Failed",
-        description: "There was a problem creating your account.",
+        description: error.message || "There was a problem creating your account.",
         variant: "destructive"
       });
     } finally {
