@@ -9,7 +9,239 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      budget_items: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          fiscal_year: string
+          id: string
+          title: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          fiscal_year: string
+          id?: string
+          title: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          fiscal_year?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      initiatives: {
+        Row: {
+          category: string
+          created_at: string
+          current_supporters: number
+          description: string
+          end_date: string
+          goal: number
+          id: string
+          status: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_supporters?: number
+          description: string
+          end_date: string
+          goal: number
+          id?: string
+          status?: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_supporters?: number
+          description?: string
+          end_date?: string
+          goal?: number
+          id?: string
+          status?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      legislation: {
+        Row: {
+          category: string
+          full_text: string
+          id: string
+          published_date: string
+          status: string
+          summary: string
+          title: string
+          votes_against: number
+          votes_for: number
+        }
+        Insert: {
+          category: string
+          full_text: string
+          id?: string
+          published_date?: string
+          status: string
+          summary: string
+          title: string
+          votes_against?: number
+          votes_for?: number
+        }
+        Update: {
+          category?: string
+          full_text?: string
+          id?: string
+          published_date?: string
+          status?: string
+          summary?: string
+          title?: string
+          votes_against?: number
+          votes_for?: number
+        }
+        Relationships: []
+      }
+      polls: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          end_date: string
+          id: string
+          neutral_count: number
+          oppose_count: number
+          support_count: number
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          end_date: string
+          id?: string
+          neutral_count?: number
+          oppose_count?: number
+          support_count?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          end_date?: string
+          id?: string
+          neutral_count?: number
+          oppose_count?: number
+          support_count?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          name?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      votes: {
+        Row: {
+          created_at: string
+          id: string
+          poll_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          poll_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          poll_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

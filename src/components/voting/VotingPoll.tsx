@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import VotingProgress from "@/components/voting/VotingProgress";
 import { ThumbsUp, ThumbsDown, Star } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import VotingProgress from "@/components/voting/VotingProgress";
 
 interface VotingPollProps {
   id: string;
@@ -27,38 +26,43 @@ const VotingPoll = ({
   endDate,
   category,
   supportCount: initialSupportCount,
-  opposeCount: initialOpposeCount,
+  opposeCount: initialOposeCount,
   neutralCount: initialNeutralCount,
   isVoted = false,
 }: VotingPollProps) => {
   const [userVote, setUserVote] = useState<"support" | "oppose" | "neutral" | null>(null);
   const [supportCount, setSupportCount] = useState(initialSupportCount);
-  const [opposeCount, setOpposeCount] = useState(initialOpposeCount);
+  const [opposeCount, setOppostCount] = useState(initialOposeCount);
   const [neutralCount, setNeutralCount] = useState(initialNeutralCount);
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const { toast } = useToast();
 
+  // Calculate total and percentages
   const totalVotes = supportCount + opposeCount + neutralCount;
   const supportPercentage = totalVotes > 0 ? Math.round((supportCount / totalVotes) * 100) : 0;
   const opposePercentage = totalVotes > 0 ? Math.round((opposeCount / totalVotes) * 100) : 0;
   const neutralPercentage = totalVotes > 0 ? Math.round((neutralCount / totalVotes) * 100) : 0;
 
-  // Check for logged in user and retrieve previous vote
   useEffect(() => {
+    // Check if user is logged in
     const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-      
-      if (data.user) {
-        const { data: voteData } = await supabase
-          .from('votes')
-          .select('vote_type')
-          .eq('poll_id', id)
-          .eq('user_id', data.user.id)
-          .single();
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setUser(data.session.user);
         
-        if (voteData) {
-          setUserVote(voteData.vote_type as "support" | "oppose" | "neutral");
+        // Check if user has already voted on this poll
+        if (data.session.user) {
+          const { data: voteData } = await supabase
+            .from('votes')
+            .select('vote_type')
+            .eq('poll_id', id)
+            .eq('user_id', data.session.user.id)
+            .single();
+          
+          if (voteData) {
+            setUserVote(voteData.vote_type as "support" | "oppose" | "neutral");
+          }
         }
       }
     };
@@ -67,27 +71,37 @@ const VotingPoll = ({
   }, [id]);
 
   const handleVote = async (vote: "support" | "oppose" | "neutral") => {
-    if (userVote === vote) return;
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to vote on polls.",
-        variant: "destructive"
+        description: "Please sign in to vote on polls.",
+        variant: "destructive",
       });
       return;
     }
-
+    
     setIsLoading(true);
     
     try {
-      // If user already voted, update their vote
+      let supportDelta = 0;
+      let opposeDelta = 0;
+      let neutralDelta = 0;
+      
+      // Calculate how counts should change
       if (userVote) {
-        // Remove previous vote
-        if (userVote === "support") setSupportCount(prev => prev - 1);
-        if (userVote === "oppose") setOpposeCount(prev => prev - 1);
-        if (userVote === "neutral") setNeutralCount(prev => prev - 1);
-        
-        // Update vote in database
+        // User is changing their vote
+        if (userVote === 'support') supportDelta--;
+        else if (userVote === 'oppose') opposeDelta--;
+        else if (userVote === 'neutral') neutralDelta--;
+      }
+      
+      if (vote === 'support') supportDelta++;
+      else if (vote === 'oppose') opposeDelta++;
+      else if (vote === 'neutral') neutralDelta++;
+      
+      // Update the vote in the database
+      if (userVote) {
+        // Update existing vote
         await supabase
           .from('votes')
           .update({ vote_type: vote })
@@ -97,30 +111,27 @@ const VotingPoll = ({
         // Insert new vote
         await supabase
           .from('votes')
-          .insert([
-            { 
-              poll_id: id, 
-              user_id: user.id, 
-              vote_type: vote 
-            }
-          ]);
+          .insert({
+            poll_id: id,
+            user_id: user.id,
+            vote_type: vote
+          });
       }
       
-      // Increment vote count
-      if (vote === "support") setSupportCount(prev => prev + 1);
-      if (vote === "oppose") setOpposeCount(prev => prev + 1);
-      if (vote === "neutral") setNeutralCount(prev => prev + 1);
-      
-      // Update vote count in polls table
+      // Update poll counts
       await supabase
         .from('polls')
         .update({
-          support_count: vote === "support" ? supportCount + 1 : supportCount - (userVote === "support" ? 1 : 0),
-          oppose_count: vote === "oppose" ? opposeCount + 1 : opposeCount - (userVote === "oppose" ? 1 : 0),
-          neutral_count: vote === "neutral" ? neutralCount + 1 : neutralCount - (userVote === "neutral" ? 1 : 0),
+          support_count: supportCount + supportDelta,
+          oppose_count: opposeCount + opposeDelta,
+          neutral_count: neutralCount + neutralDelta
         })
         .eq('id', id);
       
+      // Update local state
+      setSupportCount(prev => prev + supportDelta);
+      setOppostCount(prev => prev + opposeDelta);
+      setNeutralCount(prev => prev + neutralDelta);
       setUserVote(vote);
       
       toast({
@@ -130,7 +141,7 @@ const VotingPoll = ({
     } catch (error) {
       console.error("Error recording vote:", error);
       toast({
-        title: "Vote Failed",
+        title: "Error",
         description: "There was a problem recording your vote. Please try again.",
         variant: "destructive"
       });
@@ -140,89 +151,102 @@ const VotingPoll = ({
   };
 
   return (
-    <Card className="card-hover">
-      <CardHeader>
+    <div className="border rounded-lg shadow-sm overflow-hidden">
+      <div className="p-4 border-b">
         <div className="flex justify-between items-start mb-2">
-          <Badge variant="secondary" className="capitalize">
-            {category}
-          </Badge>
-          <Badge variant="outline">
-            Ends {endDate}
-          </Badge>
+          <h3 className="font-medium text-lg">{title}</h3>
+          <Badge>{category}</Badge>
         </div>
-        <CardTitle className="text-xl">{title}</CardTitle>
-        <CardDescription className="text-sm">
-          {totalVotes} votes so far
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-civic-gray-dark mb-4">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      
+      <div className="p-4 space-y-4">
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <ThumbsUp className="h-4 w-4 mr-2 text-green-500" />
+              <span>Support</span>
+            </div>
+            <span className="text-sm font-medium">{supportPercentage}%</span>
+          </div>
+          <VotingProgress
+            value={supportPercentage}
+            className={userVote === "support" ? "bg-green-100" : "bg-muted"}
+            indicatorClassName="bg-green-500"
+          />
+        </div>
         
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="flex items-center">
-                <ThumbsUp size={16} className="text-civic-green mr-2" /> Support
-              </span>
-              <span>{supportPercentage}%</span>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <ThumbsDown className="h-4 w-4 mr-2 text-red-500" />
+              <span>Oppose</span>
             </div>
-            <VotingProgress value={supportPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-civic-green" />
+            <span className="text-sm font-medium">{opposePercentage}%</span>
           </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="flex items-center">
-                <ThumbsDown size={16} className="text-red-500 mr-2" /> Oppose
-              </span>
-              <span>{opposePercentage}%</span>
+          <VotingProgress
+            value={opposePercentage}
+            className={userVote === "oppose" ? "bg-red-100" : "bg-muted"}
+            indicatorClassName="bg-red-500"
+          />
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <Star className="h-4 w-4 mr-2 text-amber-500" />
+              <span>Neutral</span>
             </div>
-            <VotingProgress value={opposePercentage} className="h-2 bg-gray-100" indicatorClassName="bg-red-500" />
+            <span className="text-sm font-medium">{neutralPercentage}%</span>
           </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="flex items-center">
-                <Star size={16} className="text-amber-500 mr-2" /> Neutral
-              </span>
-              <span>{neutralPercentage}%</span>
-            </div>
-            <VotingProgress value={neutralPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-amber-400" />
+          <VotingProgress
+            value={neutralPercentage}
+            className={userVote === "neutral" ? "bg-amber-100" : "bg-muted"}
+            indicatorClassName="bg-amber-500"
+          />
+        </div>
+      </div>
+      
+      <div className="p-4 border-t bg-muted/20 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <div>
+            Total Votes: {totalVotes} · Ends: {new Date(endDate).toLocaleDateString()}
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant={userVote === "support" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleVote("support")}
+              disabled={isLoading}
+              className={userVote === "support" ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+              Support
+            </Button>
+            <Button
+              variant={userVote === "oppose" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleVote("oppose")}
+              disabled={isLoading}
+              className={userVote === "oppose" ? "bg-red-600 hover:bg-red-700" : ""}
+            >
+              <ThumbsDown className="h-3.5 w-3.5 mr-1" />
+              Oppose
+            </Button>
+            <Button
+              variant={userVote === "neutral" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleVote("neutral")}
+              disabled={isLoading}
+              className={userVote === "neutral" ? "bg-amber-500 hover:bg-amber-600" : ""}
+            >
+              <Star className="h-3.5 w-3.5 mr-1" />
+              Neutral
+            </Button>
           </div>
         </div>
-      </CardContent>
-      <CardFooter className="flex justify-between border-t pt-4">
-        <Button
-          variant={userVote === "support" ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleVote("support")}
-          disabled={isLoading}
-          className={userVote === "support" ? "bg-civic-green hover:bg-civic-green-dark" : ""}
-        >
-          <ThumbsUp size={16} className="mr-1" />
-          Support
-        </Button>
-        <Button
-          variant={userVote === "oppose" ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleVote("oppose")}
-          disabled={isLoading}
-          className={userVote === "oppose" ? "bg-red-500 hover:bg-red-600" : ""}
-        >
-          <ThumbsDown size={16} className="mr-1" />
-          Oppose
-        </Button>
-        <Button
-          variant={userVote === "neutral" ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleVote("neutral")}
-          disabled={isLoading}
-          className={userVote === "neutral" ? "bg-amber-500 hover:bg-amber-600" : ""}
-        >
-          <Star size={16} className="mr-1" />
-          Neutral
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 
