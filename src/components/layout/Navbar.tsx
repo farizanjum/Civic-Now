@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import {
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const toggleMenu = () => {
@@ -24,8 +23,9 @@ const Navbar = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    await logout(() => {
+      navigate('/login');
+    });
   };
 
   return (

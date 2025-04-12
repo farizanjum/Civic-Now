@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AtSign, Lock, UserPlus, LogIn, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { signIn, signUp, resetPassword, DEMO_CREDENTIALS } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
+import { resetPassword, DEMO_CREDENTIALS } from "@/lib/auth";
 
 const AuthForm = () => {
   const [activeTab, setActiveTab] = useState("login");
@@ -20,16 +20,15 @@ const AuthForm = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login, signup } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    const result = await signIn(email, password);
-    
-    if (result.user) {
+    await login(email, password, () => {
       navigate("/");
-    }
+    });
     
     setIsLoading(false);
   };
@@ -39,11 +38,9 @@ const AuthForm = () => {
     setEmail(DEMO_CREDENTIALS.email);
     setPassword(DEMO_CREDENTIALS.password);
     
-    const result = await signIn(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password);
-    
-    if (result.user) {
+    await login(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password, () => {
       navigate("/");
-    }
+    });
     
     setIsLoading(false);
   };
@@ -52,12 +49,10 @@ const AuthForm = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    const result = await signUp(email, password);
-    
-    if (result.user) {
+    await signup(email, password, "", () => {
       // Switch to login tab
       setActiveTab("login");
-    }
+    });
     
     setIsLoading(false);
   };

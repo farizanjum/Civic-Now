@@ -1,6 +1,5 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { signIn, signOut, getCurrentUser } from "./auth";
 
@@ -13,9 +12,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string, callback?: () => void) => Promise<void>;
+  signup: (email: string, password: string, name: string, callback?: () => void) => Promise<void>;
+  logout: (callback?: () => void) => void;
   loading: boolean;
 }
 
@@ -32,7 +31,6 @@ const DEMO_USER: User = {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Check for existing session on initial load
   useEffect(() => {
@@ -70,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, callback?: () => void) => {
     setLoading(true);
     try {
       // For demo purposes, we'll use hardcoded credentials
@@ -84,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: "Welcome back!",
         });
         
-        navigate("/");
+        if (callback) callback();
         return;
       }
       
@@ -105,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: "Welcome back!",
         });
         
-        navigate("/");
+        if (callback) callback();
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -119,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
+  const signup = async (email: string, password: string, name: string, callback?: () => void) => {
     setLoading(true);
     try {
       // In a demo app, we'll just pretend to create an account
@@ -127,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Account created",
         description: "Please login with your new account",
       });
-      navigate("/login");
+      if (callback) callback();
     } catch (error) {
       console.error("Signup error:", error);
       toast({
@@ -140,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (callback?: () => void) => {
     try {
       await signOut();
       localStorage.removeItem("civicnow_user");
@@ -149,13 +147,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      navigate("/login");
+      if (callback) callback();
     } catch (error) {
       console.error("Logout error:", error);
       // Force logout even if signOut fails
       localStorage.removeItem("civicnow_user");
       setUser(null);
-      navigate("/login");
+      if (callback) callback();
     }
   };
 
