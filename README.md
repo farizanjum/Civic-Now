@@ -239,7 +239,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Supabase for the powerful backend platform
 - Shadcn UI for the beautiful component library
 - The open source community for the amazing tools and libraries
-- [Hackathon Name] for the opportunity to create civic technology
+- xto10x by Masai for the opportunity to create civic technology
 
 ---
 
