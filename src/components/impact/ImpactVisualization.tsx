@@ -335,9 +335,13 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                   
                   // Normalize demographic percentages to ensure they sum to 100%
                   newNeighborhoods.forEach(n => {
-                    const sum = Object.values(n.demographics).reduce((a, b) => a + b, 0);
+                    let sum = 0;
                     for (const key in n.demographics) {
-                      n.demographics[key] = Math.round((n.demographics[key] / sum) * 100);
+                      sum += Number(n.demographics[key]);
+                    }
+                    
+                    for (const key in n.demographics) {
+                      n.demographics[key] = Math.round((Number(n.demographics[key]) / sum) * 100);
                     }
                   });
                   
@@ -473,9 +477,14 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
       }
     ];
     
-    // Normalize demographic percentages to ensure they sum to 100%
+    // Fix: Explicitly convert to numbers before arithmetic operations
     neighborhoods.forEach(n => {
-      const sum = Object.values(n.demographics).reduce((a, b) => Number(a) + Number(b), 0);
+      // Ensure all values are treated as numbers
+      let sum = 0;
+      for (const key in n.demographics) {
+        sum += Number(n.demographics[key]);
+      }
+      
       for (const key in n.demographics) {
         n.demographics[key] = Math.round((Number(n.demographics[key]) / sum) * 100);
       }
