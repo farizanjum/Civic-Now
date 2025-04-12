@@ -1,7 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/hooks/use-toast";
-import { signIn, signOut, getCurrentUser } from "./auth";
+import { signIn, signUp, signOut, getCurrentUser, DEMO_CREDENTIALS } from "./auth";
+import { supabase } from "@/lib/supabase";
 
 interface User {
   id: string;
@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Demo user for testing
 const DEMO_USER: User = {
   id: "demo-user-1",
-  email: "demo@example.com",
+  email: DEMO_CREDENTIALS.email,
   name: "Demo User",
   role: "admin"
 };
@@ -51,8 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userData = {
             id: currentUser.id,
             email: currentUser.email || "",
-            name: currentUser.user_metadata?.full_name,
-            role: currentUser.app_metadata?.role || "user"
+            name: currentUser.name,
+            role: currentUser.role || "user"
           };
           setUser(userData);
           // Store in localStorage for persistence
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       // For demo purposes, we'll use hardcoded credentials
-      if (email === "demo@example.com" && password === "password") {
+      if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
         // Store in localStorage
         localStorage.setItem("civicnow_user", JSON.stringify(DEMO_USER));
         setUser(DEMO_USER);
@@ -87,14 +87,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Normal login with auth system
-      const result = await signIn(email, password);
+      const result = await signIn({ email, password });
       if (result.user) {
+        // Get user profile data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', result.user.id)
+          .single();
+          
         const userData = {
           id: result.user.id,
           email: result.user.email || "",
-          name: result.user.user_metadata?.full_name,
-          role: result.user.app_metadata?.role || "user"
+          name: profile?.name || result.user.user_metadata?.name,
+          role: profile?.role || "user"
         };
+        
         setUser(userData);
         localStorage.setItem("civicnow_user", JSON.stringify(userData));
         
@@ -120,11 +128,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, name: string, callback?: () => void) => {
     setLoading(true);
     try {
-      // In a demo app, we'll just pretend to create an account
+      await signUp({ email, password, name });
+      
       toast({
         title: "Account created",
         description: "Please login with your new account",
       });
+      
       if (callback) callback();
     } catch (error) {
       console.error("Signup error:", error);

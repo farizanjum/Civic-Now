@@ -19,6 +19,12 @@ export type SignUpCredentials = {
   name?: string;
 };
 
+// Demo credentials for quick login
+export const DEMO_CREDENTIALS = {
+  email: "demo@example.com",
+  password: "password"
+};
+
 export async function signIn({ email, password }: SignInCredentials) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -55,6 +61,18 @@ export async function signOut() {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset-password',
+  });
+  
+  if (error) {
+    throw new Error(error.message);
+  }
+  
+  return { success: true };
 }
 
 export async function getCurrentUser() {
