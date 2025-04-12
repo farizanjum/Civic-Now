@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ThumbsUp, ThumbsDown, HelpCircle, RefreshCw } from 'lucide-react';
 import { 
@@ -72,7 +71,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT include any asterisks (**) in your output as they're used for markdown formatting. Instead, format your output as well-organized plain text with proper paragraphs and spacing."
+              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT use any markdown formatting like asterisks or bold text in your response. Format your output as well-organized plain text with proper paragraphs and spacing."
             },
             {
               role: "user",
@@ -89,7 +88,10 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       }
       
       const data = await response.json();
-      const generatedSummary = data.choices[0].message.content;
+      let generatedSummary = data.choices[0].message.content;
+      
+      // Clean up the summary by removing any markdown formatting
+      generatedSummary = generatedSummary.replace(/\*\*/g, '');
       
       // Generate impacts
       const impactsResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -103,11 +105,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. For each category, provide 3-5 bullet points that are concise (1-2 lines each max). Do not use any markdown formatting or asterisks. Keep each point brief and specific."
+              content: "You are an expert in Indian governance and policy analysis. Based on the legislative text, identify potential impacts in three categories: positive impacts, potential concerns, and uncertain effects. For each category, provide 3-5 bullet points that are EXTREMELY concise (max 1-2 lines each). DO NOT use any markdown formatting, asterisks, or bold text. Do not use prefixes like 'Positive:', just list the impacts directly. Keep each point very brief and specific."
             },
             {
               role: "user",
-              content: `Analyze the following legislative text and provide short, concise impacts (1-2 lines each):\n\n${originalText}`
+              content: `Analyze the following legislative text and provide extremely short, concise impacts (max 1-2 lines each) with NO markdown formatting:\n\n${originalText}`
             }
           ],
           temperature: 0.4,
@@ -120,7 +122,10 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       }
       
       const impactsData = await impactsResponse.json();
-      const impactsContent = impactsData.choices[0].message.content;
+      let impactsContent = impactsData.choices[0].message.content;
+      
+      // Clean up any markdown in the impacts content
+      impactsContent = impactsContent.replace(/\*\*/g, '');
       
       // Parse the impacts from the AI response
       const positiveRegex = /Positive Impacts:[\s\S]*?(?=Potential Concerns:|$)/i;
@@ -134,8 +139,8 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       const extractBulletPoints = (text) => {
         if (!text) return [];
         // Clean up any markdown formatting and extract the bullet points
-        const cleanedText = text.replace(/\*\*/g, '');
-        const bulletPoints = cleanedText.split(/\n-|\n•/).slice(1);
+        const cleanedText = text.replace(/\*\*/g, '').replace(/^\s*positive impacts:?\s*/i, '');
+        const bulletPoints = cleanedText.split(/\n-|\n•|\n\d+\.|\n/).filter(Boolean);
         return bulletPoints.map(point => point.trim()).filter(point => point);
       };
       
