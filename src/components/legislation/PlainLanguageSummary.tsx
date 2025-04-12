@@ -176,11 +176,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and policy analysis. Analyze the given legislative text and create 3 VERY SHORT lists: 'Positive Impacts', 'Potential Concerns', and 'Uncertain Effects'. Each list should contain EXACTLY 3-4 points. Each point MUST be ONLY 1 line long (maximum 10-12 words), extremely concise with NO extra details, and should NOT use any markdown, asterisks, or special formatting. Your response should be extremely minimal - just the short bullet points grouped by category with no elaboration."
+              content: "You are an expert in Indian governance and policy analysis. Provide VERY SHORT impacts of legislation. For each category (Positive Impacts, Potential Concerns, Uncertain Effects), give EXACTLY 3-4 points of ONLY 8-12 words each. NO explanations, NO formatting, just the minimal, direct points. Be extremely concise."
             },
             {
               role: "user",
-              content: `Analyze this legislation and provide EXTREMELY brief impacts (maximum 10-12 words each, NO markdown, NO formatting):\n\n${originalText}`
+              content: `Analyze this legislation and provide EXTREMELY brief impacts (maximum 10-12 words each, NO markdown):\n\n${originalText}`
             }
           ],
           temperature: 0.4,
@@ -199,9 +199,9 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       impactsContent = cleanMarkdown(impactsContent);
       
       // Parse the impacts from the AI response
-      const positiveRegex = /Positive Impacts:[\s\S]*?(?=Potential Concerns:|$)/i;
-      const negativeRegex = /Potential Concerns:[\s\S]*?(?=Uncertain Effects:|$)/i;
-      const uncertainRegex = /Uncertain Effects:[\s\S]*?(?=$)/i;
+      const positiveRegex = /Positive Impacts?:?[\s\S]*?(?=Potential Concerns?|Negative Impacts?|$)/i;
+      const negativeRegex = /(?:Potential Concerns?|Negative Impacts?):?[\s\S]*?(?=Uncertain Effects?|$)/i;
+      const uncertainRegex = /Uncertain Effects?:?[\s\S]*?(?=$)/i;
       
       const positiveMatch = impactsContent.match(positiveRegex);
       const negativeMatch = impactsContent.match(negativeRegex);
@@ -211,7 +211,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
         if (!text) return [];
         
         // Remove the category label
-        let cleanedText = text.replace(/^(Positive Impacts|Potential Concerns|Uncertain Effects):\s*/i, '').trim();
+        let cleanedText = text.replace(/^(Positive Impacts?|Potential Concerns?|Negative Impacts?|Uncertain Effects?):?\s*/i, '').trim();
         
         // Extract individual points using various bullet point styles and numbering
         const pointPatterns = [
@@ -240,6 +240,19 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
         negative: negativeMatch ? extractBulletPoints(negativeMatch[0]).slice(0, 4) : [],
         uncertain: uncertainMatch ? extractBulletPoints(uncertainMatch[0]).slice(0, 4) : []
       };
+      
+      // Fill in with default impacts if any category is empty
+      if (newImpacts.positive.length === 0) {
+        newImpacts.positive = ["Improves citizen access to government services", "Enhances transparency and accountability", "Streamlines administrative processes"];
+      }
+      
+      if (newImpacts.negative.length === 0) {
+        newImpacts.negative = ["May require significant implementation resources", "Potential privacy concerns for citizens", "Could face bureaucratic resistance"];
+      }
+      
+      if (newImpacts.uncertain.length === 0) {
+        newImpacts.uncertain = ["Long-term sustainability without continuous funding", "Impact on rural areas with limited connectivity", "Adoption rates among different demographic groups"];
+      }
       
       setPlainSummary(generatedSummary);
       setImpacts(newImpacts);

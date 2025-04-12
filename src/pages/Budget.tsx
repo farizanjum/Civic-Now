@@ -56,6 +56,7 @@ const Budget = () => {
   const [processedReceipt, setProcessedReceipt] = useState<OcrResponse | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [legislationTitle, setLegislationTitle] = useState(sampleLegislationData.title);
+  const [legislationText, setLegislationText] = useState(sampleLegislationData.originalText);
 
   const handleReceiptProcessed = (data: OcrResponse) => {
     setProcessedReceipt(data);
@@ -93,6 +94,8 @@ const Budget = () => {
   // Handle title change from PlainLanguageSummary component
   const handleTitleChange = (newTitle: string) => {
     setLegislationTitle(newTitle);
+    // Trigger a toast to confirm that the title and impact data will update
+    toast.info(`Title updated to: ${newTitle}`);
   };
 
   return (
@@ -142,7 +145,7 @@ const Budget = () => {
               <h2 className="text-2xl font-bold text-civic-blue">Legislation Impact</h2>
               <PlainLanguageSummary 
                 title={legislationTitle}
-                originalText={sampleLegislationData.originalText}
+                originalText={legislationText}
                 plainSummary={sampleLegislationData.plainSummary}
                 impacts={sampleLegislationData.impacts}
                 status={sampleLegislationData.status}

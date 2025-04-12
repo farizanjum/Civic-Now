@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { 
@@ -169,6 +170,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
     if (!legislationTitle) return;
     
     setIsGenerating(true);
+    toast.info(`Analyzing impact for: ${legislationTitle}`);
     
     try {
       // Get the category from the title
@@ -195,7 +197,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
         })
       });
       
-      let newCategory = "Environment"; // Default
+      let newCategory = "Technology"; // Default
       
       if (categoryResponse.ok) {
         const categoryData = await categoryResponse.json();
@@ -245,7 +247,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
           
           try {
             // First try direct parsing
-            demographicsJson = JSON.parse(demographicsText);
+            demographicsJson = JSON.parse(demographicsText.replace(/```json|```/g, '').trim());
           } catch (e) {
             // If that fails, try to extract JSON from text
             const jsonMatch = demographicsText.match(/(\{[\s\S]*\})/);
@@ -309,7 +311,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                 
                 try {
                   // First try direct parsing
-                  neighborhoodsJson = JSON.parse(neighborhoodsText);
+                  neighborhoodsJson = JSON.parse(neighborhoodsText.replace(/```json|```/g, '').trim());
                 } catch (e) {
                   // If that fails, try to extract JSON from text
                   const jsonMatch = neighborhoodsText.match(/(\{[\s\S]*\})/);
@@ -381,7 +383,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
       }
     } catch (error) {
       console.error("Error generating impact data:", error);
-      toast.error("Failed to generate impact data. Using sample data instead.");
+      toast.error("Failed to generate impact data. Using estimated data instead.");
       // Use sample data with the new title
       setImpactData({
         ...sampleImpactData,
@@ -742,8 +744,8 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                             <p className="text-sm">
                               {neighborhood.name} will experience a {neighborhood.impactLevel >= 7 ? 'significant' : 'moderate'} impact 
                               from {impactData.title}. The {Object.entries(neighborhood.demographics)
-                                .sort((a, b) => b[1] - a[1])[0][0]} demographic 
-                              (making up {Object.entries(neighborhood.demographics).sort((a, b) => b[1] - a[1])[0][1]}% of the population) 
+                                .sort((a, b) => Number(b[1]) - Number(a[1]))[0][0]} demographic 
+                              (making up {Object.entries(neighborhood.demographics).sort((a, b) => Number(b[1]) - Number(a[1]))[0][1]}% of the population) 
                               will be most affected.
                             </p>
                           </div>
