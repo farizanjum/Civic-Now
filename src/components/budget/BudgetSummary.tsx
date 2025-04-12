@@ -1,170 +1,182 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from "recharts";
 
-// Sample data
-const budgetData = [
-  { category: "Infrastructure", amount: 2500, color: "#8B5CF6" },
-  { category: "Public Services", amount: 1800, color: "#0EA5E9" },
-  { category: "Community Events", amount: 1200, color: "#F97316" },
-  { category: "Education", amount: 2200, color: "#22C55E" },
-  { category: "Maintenance", amount: 1500, color: "#EF4444" },
-  { category: "Other", amount: 800, color: "#8E9196" },
-];
+// Mock data
+const budgetData = {
+  totalBudget: 7500000, // 7.5 crore in rupees
+  spent: 3250000, // 3.25 crore in rupees
+  remaining: 4250000, // 4.25 crore in rupees
+  categories: [
+    { name: "Infrastructure", value: 2500000 },
+    { name: "Education", value: 1500000 },
+    { name: "Healthcare", value: 1200000 },
+    { name: "Parks & Recreation", value: 800000 },
+    { name: "Public Safety", value: 1000000 },
+    { name: "Administration", value: 500000 },
+  ],
+  monthlySpending: [
+    { month: "Jan", amount: 450000 },
+    { month: "Feb", amount: 520000 },
+    { month: "Mar", amount: 580000 },
+    { month: "Apr", amount: 620000 },
+    { month: "May", amount: 710000 },
+    { month: "Jun", amount: 370000 },
+  ],
+};
 
-const monthlyData = [
-  { name: "Jan", amount: 1200 },
-  { name: "Feb", amount: 1900 },
-  { name: "Mar", amount: 2100 },
-  { name: "Apr", amount: 1800 },
-  { name: "May", amount: 2500 },
-  { name: "Jun", amount: 1400 },
-  { name: "Jul", amount: 2200 },
-  { name: "Aug", amount: 1800 },
-  { name: "Sep", amount: 2400 },
-  { name: "Oct", amount: 1700 },
-  { name: "Nov", amount: 2100 },
-  { name: "Dec", amount: 2800 },
-];
+// Colors for pie chart
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82ca9d"];
+
+// Format number to crore rupees
+const formatToCrore = (num: number) => {
+  return `₹${(num / 10000000).toFixed(2)} Cr`;
+};
+
+// Format large numbers with commas
+const formatNumber = (num: number) => {
+  return `₹${num.toLocaleString("en-IN")}`;
+};
 
 const BudgetSummary = () => {
-  const [timeframe, setTimeframe] = useState("year");
-  const totalSpent = budgetData.reduce((sum, item) => sum + item.amount, 0);
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Total Spending</CardTitle>
-            <CardDescription>Current fiscal year</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-civic-blue">${totalSpent.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Largest Category</CardTitle>
-            <CardDescription>Highest spending area</CardDescription>
+            <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-civic-blue">
-              {budgetData.sort((a, b) => b.amount - a.amount)[0].category}
+              ₹{(budgetData.totalBudget / 10000000).toFixed(2)} Cr
             </div>
-            <p className="text-sm text-civic-gray-dark mt-1">
-              ${budgetData.sort((a, b) => b.amount - a.amount)[0].amount.toLocaleString()}
+            <p className="text-xs text-muted-foreground mt-1">
+              Fiscal Year 2025-2026
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Items Tracked</CardTitle>
-            <CardDescription>Total receipts processed</CardDescription>
+            <CardTitle className="text-sm font-medium">Spent</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-civic-blue">143</div>
-            <p className="text-sm text-civic-gray-dark mt-1">Last added on April 10, 2025</p>
+            <div className="text-3xl font-bold text-red-500">
+              ₹{(budgetData.spent / 10000000).toFixed(2)} Cr
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {((budgetData.spent / budgetData.totalBudget) * 100).toFixed(1)}% of total budget
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Remaining</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-500">
+              ₹{(budgetData.remaining / 10000000).toFixed(2)} Cr
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {((budgetData.remaining / budgetData.totalBudget) * 100).toFixed(1)}% of total budget
+            </p>
           </CardContent>
         </Card>
       </div>
-
-      <Card className="col-span-2">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Spending by Category</CardTitle>
-            <Select defaultValue={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select timeframe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="quarter">This Quarter</SelectItem>
-                <SelectItem value="year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={budgetData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    innerRadius={40}
-                    fill="#8884d8"
-                    dataKey="amount"
-                    nameKey="category"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {budgetData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => `$${value.toLocaleString()}`} 
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={budgetData}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tickFormatter={(value) => `$${value.toLocaleString()}`} />
-                  <YAxis dataKey="category" type="category" width={100} />
-                  <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                  <Bar dataKey="amount" fill="#8B5CF6" radius={[0, 4, 4, 0]}>
-                    {budgetData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Spending Trend</CardTitle>
+          <CardTitle>Budget Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={monthlyData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 30,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} />
-                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                <Bar dataKey="amount" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={30} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <Tabs defaultValue="chart">
+            <TabsList className="mb-4">
+              <TabsTrigger value="chart">Chart View</TabsTrigger>
+              <TabsTrigger value="category">Category Breakdown</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly Spending</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="chart" className="space-y-4">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={budgetData.categories}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={120}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {budgetData.categories.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatNumber(Number(value))} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-3">
+                {budgetData.categories.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-1.5">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                    <span className="text-xs">
+                      {entry.name}: {formatToCrore(entry.value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="category" className="space-y-4">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={budgetData.categories}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis tickFormatter={(value) => `₹${(value / 10000000).toFixed(1)}Cr`} />
+                    <Tooltip formatter={(value) => formatNumber(Number(value))} />
+                    <Legend />
+                    <Bar dataKey="value" fill="#8884d8" name="Amount" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="mt-4">
+                <Button variant="outline" size="sm">
+                  Export Data
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="monthly" className="space-y-4">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={budgetData.monthlySpending}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => `₹${(value / 100000).toFixed(1)}L`} />
+                    <Tooltip formatter={(value) => formatNumber(Number(value))} />
+                    <Legend />
+                    <Line type="monotone" dataKey="amount" stroke="#8884d8" name="Spending" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="mt-4">
+                <Button variant="outline" size="sm">
+                  Download Report
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
