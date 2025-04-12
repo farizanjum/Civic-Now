@@ -1,97 +1,128 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from './supabase';
-import { Session, User } from '@supabase/supabase-js';
 
-type AuthContextType = {
-  session: Session | null;
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+}
+
+interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => void;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Demo user for testing
+const DEMO_USER: User = {
+  id: "demo-user-1",
+  email: "demo@example.com",
+  name: "Demo User",
+  role: "admin"
 };
 
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  isLoading: true,
-});
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // Check for existing session on initial load
   useEffect(() => {
-    const fetchSession = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Check for demo user first
-        const demoUser = localStorage.getItem('civicnow_demo_user');
-        const demoSession = localStorage.getItem('civicnow_demo_session');
-        
-        if (demoUser && demoSession) {
-          console.log("Demo user found, using demo session");
-          setUser(JSON.parse(demoUser) as User);
-          setSession(JSON.parse(demoSession) as Session);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Otherwise get the current session from Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      } finally {
-        setIsLoading(false);
+    const checkSession = () => {
+      const storedUser = localStorage.getItem("civicnow_user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
+      setLoading(false);
     };
 
-    fetchSession();
-
-    // Listen for auth state changes
-    const handleAuthChange = (event: string, session: Session | null) => {
-      console.log(`Supabase auth event: ${event}`);
-      
-      // If signing out, also check if we need to clear demo user
-      if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('civicnow_demo_user');
-        localStorage.removeItem('civicnow_demo_session');
-      }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    };
-
-    // Set up auth state listener for Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
-
-    // Also listen for storage changes (for demo user)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'civicnow_demo_user' || e.key === 'civicnow_demo_session') {
-        fetchSession();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup subscriptions
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    checkSession();
+    console.info("Supabase auth event: INITIAL_SESSION");
   }, []);
 
-  const value = {
-    session,
-    user,
-    isLoading,
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      // For demo purposes, we'll use hardcoded credentials
+      if (email === "demo@example.com" && password === "password") {
+        // Store in localStorage
+        localStorage.setItem("civicnow_user", JSON.stringify(DEMO_USER));
+        setUser(DEMO_USER);
+        
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        
+        navigate("/");
+      } else {
+        toast({
+          title: "Login failed",
+          description: "For demo, use demo@example.com / password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const signup = async (email: string, password: string, name: string) => {
+    setLoading(true);
+    try {
+      // In a demo app, we'll just pretend to create an account
+      toast({
+        title: "Account created",
+        description: "Please login with your new account",
+      });
+      navigate("/login");
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast({
+        title: "Signup failed",
+        description: "Could not create account",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("civicnow_user");
+    setUser(null);
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+    navigate("/login");
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };
