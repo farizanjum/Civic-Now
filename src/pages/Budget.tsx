@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,7 @@ interface OcrResponse {
 }
 
 const Budget = () => {
+  const navigate = useNavigate();
   const [processedReceipt, setProcessedReceipt] = useState<OcrResponse | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [legislationTitle, setLegislationTitle] = useState(sampleLegislationData.title);
@@ -65,18 +66,24 @@ const Budget = () => {
     switch(action) {
       case "budget-reports":
         toast.success("Opening budget reports dashboard...");
-        // In a real app, we would navigate to the reports page
+        navigate('/budget?tab=reports');
         break;
       case "submit-feedback":
-        window.location.href = "/feedback";
+        navigate('/feedback', { 
+          state: { 
+            topic: "Budget Feedback",
+            category: "Budget",
+            referrer: "/budget"
+          } 
+        });
         break;
       case "track-expenses":
         toast.success("Opening expense tracking tools...");
-        // In a real app, we would navigate to the expense tracking page
+        navigate('/budget?tab=tracker');
         break;
       case "view-records":
         toast.success("Loading all budget records...");
-        // In a real app, we would navigate to the records page
+        navigate('/budget?tab=records');
         break;
       default:
         break;

@@ -56,38 +56,61 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   // Use a hardcoded API key instead of prompting the user
   const MISTRAL_API_KEY = "eqYmr8jPuzR9S2Pjq3frG1u0wyVmxXoY";
 
-  // Helper function to clean markdown formatting
+  // Helper function to clean markdown formatting completely
   const cleanMarkdown = (text: string): string => {
-    // Remove markdown headings and bold formatting
-    const withoutAsterisks = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-    const withoutHeadings = withoutAsterisks.replace(/#+\s+(.*?)\n/g, '$1\n');
+    if (!text) return "";
     
-    // Remove Q&A style formatting often present in AI responses
-    const withoutQA = withoutHeadings.replace(/\*?(What is|When will|How does|Why is|Who will).*?\?/g, '');
+    // Remove all markdown formatting
+    let cleaned = text;
     
-    // Remove any remaining asterisks
-    const cleanedText = withoutQA.replace(/\*/g, '');
+    // Remove Q&A format and titles with asterisks
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*\s*\?*/g, '');
     
-    // Normalize whitespace
-    return cleanedText.replace(/\n{3,}/g, '\n\n').trim();
+    // Remove other markdown elements
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1'); // Bold
+    cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');     // Italic
+    cleaned = cleaned.replace(/^#+\s+(.*?)$/gm, '$1');   // Headers
+    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');       // Code
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Links
+    
+    // Remove common Q&A formats
+    cleaned = cleaned.replace(/^(What is|When will|How does|Why is|Who will).*?\?/gm, '');
+    
+    // Clean up extra whitespace and newlines
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    cleaned = cleaned.replace(/^\s+|\s+$/gm, '');
+    
+    return cleaned.trim();
   };
 
   const extractTitleFromText = (text: string): string => {
     // Try to extract a title from the text
     const lines = text.split('\n');
-    const possibleTitleLine = lines.find(line => 
-      line.includes("Act") && 
-      (line.includes("of 20") || line.includes("of 19"))
-    );
     
-    if (possibleTitleLine) {
-      // Try to extract just the act name
-      const titleMatch = possibleTitleLine.match(/"([^"]+)"|'([^']+)'|([^,;:.]+\s+Act\s+of\s+\d{4})/);
-      if (titleMatch) {
-        const extractedTitle = titleMatch[1] || titleMatch[2] || titleMatch[3];
-        return extractedTitle.trim();
+    // First check for lines containing "Act" keywords
+    const actNamePattern = /(["']?)([^"']+(?:Act|Bill|Amendment|Resolution|Policy|Plan|Initiative)(?:\s+of\s+\d{4})?)\1/i;
+    for (const line of lines) {
+      const match = line.match(actNamePattern);
+      if (match) {
+        return match[2].trim();
       }
-      return possibleTitleLine.trim();
+    }
+    
+    // Next try to find capitalized text that might be a title
+    const capitalizedTitlePattern = /([A-Z][A-Za-z\s]{10,}(?:Act|Bill|Plan|Policy|Initiative|Resolution))/;
+    for (const line of lines) {
+      const match = line.match(capitalizedTitlePattern);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+    
+    // As a fallback, use the first non-empty line if it's reasonably short
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && trimmed.length > 10 && trimmed.length < 100) {
+        return trimmed;
+      }
     }
     
     return "Legislative Proposal";
@@ -119,11 +142,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT use any markdown formatting, headings, bold text, or Q&A format in your response. Just provide a simple, straightforward paragraph explaining the legislation."
+              content: "You are an expert in Indian governance and legislation. Your task is to create a plain language summary of legislative text that is easy for the average citizen to understand. Focus on explaining the main points, implications, and context in simple language. Use Indian context, references, currency (₹, INR), and examples where appropriate. DO NOT use any markdown formatting, headings, bold text, Q&A format, or asterisks in your response. Just provide a simple, straightforward paragraph explaining the legislation without any special formatting whatsoever."
             },
             {
               role: "user",
-              content: `Please provide a plain language summary of the following legislative text in simple terms that any Indian citizen can understand:\n\n${originalText}`
+              content: `Please provide a plain language summary of the following legislative text in simple terms that any Indian citizen can understand. DO NOT use any markdown, asterisks, bullets, or Q&A format:\n\n${originalText}`
             }
           ],
           temperature: 0.3,
@@ -138,7 +161,7 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
       const data = await response.json();
       let generatedSummary = data.choices[0].message.content;
       
-      // Clean up the summary
+      // Clean up the summary to remove any markdown that might still be present
       generatedSummary = cleanMarkdown(generatedSummary);
       
       // Generate impacts
@@ -153,11 +176,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
           messages: [
             {
               role: "system",
-              content: "You are an expert in Indian governance and policy analysis. Analyze the given legislative text and create 3 SHORT lists of impacts: 'Positive Impacts', 'Potential Concerns', and 'Uncertain Effects'. Each list should contain EXACTLY 3-4 points. Each point MUST be ONLY 1-2 lines long, extremely concise, and should NOT use any markdown formatting. Output format should be plain text with each category clearly labeled."
+              content: "You are an expert in Indian governance and policy analysis. Analyze the given legislative text and create 3 VERY SHORT lists: 'Positive Impacts', 'Potential Concerns', and 'Uncertain Effects'. Each list should contain EXACTLY 3-4 points. Each point MUST be ONLY 1 line long (maximum 10-12 words), extremely concise with NO extra details, and should NOT use any markdown, asterisks, or special formatting. Your response should be extremely minimal - just the short bullet points grouped by category with no elaboration."
             },
             {
               role: "user",
-              content: `Analyze this legislation and provide VERY brief impacts (max 1-2 lines each, NO markdown):\n\n${originalText}`
+              content: `Analyze this legislation and provide EXTREMELY brief impacts (maximum 10-12 words each, NO markdown, NO formatting):\n\n${originalText}`
             }
           ],
           temperature: 0.4,
@@ -192,11 +215,11 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
         
         // Extract individual points using various bullet point styles and numbering
         const pointPatterns = [
-          /^\s*\d+\.\s*(.*)/gm,  // Numbered items: "1. Item text"
-          /^\s*-\s*(.*)/gm,      // Dash bullets: "- Item text"
-          /^\s*•\s*(.*)/gm,      // Bullet points: "• Item text"
-          /^\s*\*\s*(.*)/gm,     // Asterisk bullets: "* Item text"
-          /^\s*([^\n]+)/gm       // Fallback: any line with content
+          /^\s*\d+\.\s*(.*?)$/gm,  // Numbered items: "1. Item text"
+          /^\s*-\s*(.*?)$/gm,      // Dash bullets: "- Item text"
+          /^\s*•\s*(.*?)$/gm,      // Bullet points: "• Item text"
+          /^\s*\*\s*(.*?)$/gm,     // Asterisk bullets: "* Item text"
+          /^\s*([^\n]+?)$/gm       // Fallback: any line with content
         ];
         
         for (const pattern of pointPatterns) {
@@ -252,7 +275,13 @@ const PlainLanguageSummary: React.FC<LegislationSummaryProps> = ({
   };
 
   const handleFeedback = () => {
-    navigate('/feedback');
+    navigate('/feedback', { 
+      state: { 
+        topic: title,
+        category: "Legislation",
+        referrer: window.location.pathname
+      } 
+    });
   };
 
   return (

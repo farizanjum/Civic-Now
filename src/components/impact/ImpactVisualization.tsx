@@ -224,11 +224,11 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
           messages: [
             {
               role: "system",
-              content: "You are an expert data analyst. Generate realistic demographic impact percentages for a piece of legislation. Output should be in valid JSON format with three sets: age groups, income levels, and occupations, each with percentage values. The sum of percentages in each set should equal 100."
+              content: "You are an expert data analyst. Generate realistic demographic impact percentages for a piece of legislation. Output should be in valid JSON format with three sets: age groups, income levels, and occupations, each with percentage values. The sum of percentages in each set should equal 100. Do not include ANY explanation or text outside of the JSON."
             },
             {
               role: "user",
-              content: `Generate demographic impact data for legislation titled "${legislationTitle}" in the category of "${newCategory}". Return a JSON object with three properties: "age" (with keys "18-24", "25-34", "35-44", "45-60", "60+"), "income" (with keys "Low Income", "Middle Income", "High Income"), and "occupation" (with keys "Students", "Service Sector", "IT/Tech", "Business", "Retired"). Each key should have a value that represents a percentage impact, and these percentages should sum to 100 within each category.`
+              content: `Generate demographic impact data for legislation titled "${legislationTitle}" in the category of "${newCategory}". Return ONLY a JSON object with three properties: "age" (with keys "18-24", "25-34", "35-44", "45-60", "60+"), "income" (with keys "Low Income", "Middle Income", "High Income"), and "occupation" (with keys "Students", "Service Sector", "IT/Tech", "Business", "Retired"). Each key should have a numeric value that represents a percentage impact, and these percentages should sum to 100 within each category.`
             }
           ],
           temperature: 0.7,
@@ -242,10 +242,22 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
         
         try {
           // Try to parse the JSON from the response
-          const jsonMatch = demographicsText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const demographicsJson = JSON.parse(jsonMatch[0]);
-            
+          let demographicsJson;
+          
+          try {
+            // First try direct parsing
+            demographicsJson = JSON.parse(demographicsText);
+          } catch (e) {
+            // If that fails, try to extract JSON from text
+            const jsonMatch = demographicsText.match(/(\{[\s\S]*\})/);
+            if (jsonMatch) {
+              demographicsJson = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error("Could not parse JSON");
+            }
+          }
+          
+          if (demographicsJson) {
             // Create new demographic data with the parsed values
             const newDemographics = {
               age: Object.entries(demographicsJson.age || {}).map(([name, value]) => ({
@@ -277,11 +289,11 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                 messages: [
                   {
                     role: "system",
-                    content: "You are an expert in urban planning and demographic analysis. For the given legislation, generate impact scores for different neighborhoods in Bengaluru, India."
+                    content: "You are an expert in urban planning and demographic analysis. For the given legislation, generate impact scores for different neighborhoods in Bengaluru, India. Output ONLY clean, valid JSON with no additional text or explanation."
                   },
                   {
                     role: "user",
-                    content: `Generate impact data for legislation titled "${legislationTitle}" in the category "${newCategory}" for these Bengaluru neighborhoods: Indiranagar, Koramangala, HSR Layout, Whitefield. For each neighborhood, provide: 1) An impact level score from 1-10, 2) An estimated population size between 80,000-200,000, and 3) Demographic percentages for "Young Adults", "Families", and "Seniors" (should sum to 100%). Return as JSON.`
+                    content: `Generate impact data for legislation titled "${legislationTitle}" in the category "${newCategory}" for these Bengaluru neighborhoods: Indiranagar, Koramangala, HSR Layout, Whitefield. Return ONLY a JSON object where each key is a neighborhood name, and each value is an object containing: "impactLevel" (integer from 1-10), "population" (integer between 80000-200000), and "demographics" object with keys "Young Adults", "Families", and "Seniors" (percentage values that sum to 100).`
                   }
                 ],
                 temperature: 0.7,
@@ -294,10 +306,22 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
               const neighborhoodsText = neighborhoodsData.choices[0].message.content;
               
               try {
-                const neighborhoodsJsonMatch = neighborhoodsText.match(/\{[\s\S]*\}/);
-                if (neighborhoodsJsonMatch) {
-                  const neighborhoodsJson = JSON.parse(neighborhoodsJsonMatch[0]);
-                  
+                let neighborhoodsJson;
+                
+                try {
+                  // First try direct parsing
+                  neighborhoodsJson = JSON.parse(neighborhoodsText);
+                } catch (e) {
+                  // If that fails, try to extract JSON from text
+                  const jsonMatch = neighborhoodsText.match(/(\{[\s\S]*\})/);
+                  if (jsonMatch) {
+                    neighborhoodsJson = JSON.parse(jsonMatch[0]);
+                  } else {
+                    throw new Error("Could not parse JSON");
+                  }
+                }
+                
+                if (neighborhoodsJson) {
                   // Create new neighborhoods array
                   const newNeighborhoods = Object.entries(neighborhoodsJson).map(([name, data]: [string, any]) => ({
                     name,
@@ -310,6 +334,14 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                     }
                   }));
                   
+                  // Normalize demographic percentages to ensure they sum to 100%
+                  newNeighborhoods.forEach(n => {
+                    const sum = Object.values(n.demographics).reduce((a, b) => a + b, 0);
+                    for (const key in n.demographics) {
+                      n.demographics[key] = Math.round((n.demographics[key] / sum) * 100);
+                    }
+                  });
+                  
                   // Update the impact data
                   setImpactData({
                     id: `impact-${Date.now()}`,
@@ -321,7 +353,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
                   
                   toast.success("Impact data generated successfully!");
                 } else {
-                  throw new Error("Could not parse neighborhoods JSON");
+                  throw new Error("Invalid neighborhoods JSON structure");
                 }
               } catch (error) {
                 console.error("Error parsing neighborhoods data:", error);
@@ -333,7 +365,7 @@ const ImpactVisualization: React.FC<ImpactVisualizationProps> = ({ legislationTi
               generateFallbackNeighborhoods(legislationTitle, newCategory, newDemographics);
             }
           } else {
-            throw new Error("Could not find JSON in response");
+            throw new Error("Invalid demographics JSON structure");
           }
         } catch (error) {
           console.error("Error parsing demographics data:", error);
