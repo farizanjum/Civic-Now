@@ -1,13 +1,31 @@
+
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Bell, UserCircle } from "lucide-react";
+import { Menu, X, Bell, UserCircle, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { signOut } from "@/lib/auth";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
@@ -35,15 +53,41 @@ const Navbar = () => {
             <Button variant="ghost" size="icon">
               <Bell size={20} />
             </Button>
-            <Link to="/login">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <UserCircle size={18} />
-                <span>Sign In</span>
-              </Button>
-            </Link>
-            <Link to="/admin">
-              <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Admin Panel</Button>
-            </Link>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <UserCircle size={18} />
+                    <span>{user.email?.split('@')[0]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
+                    <LogOut size={16} className="mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/login">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <UserCircle size={18} />
+                  <span>Sign In</span>
+                </Button>
+              </Link>
+            )}
+            
+            {user && (
+              <Link to="/admin">
+                <Button size="sm" className="bg-civic-blue hover:bg-civic-blue-dark">Admin Panel</Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -73,17 +117,28 @@ const Navbar = () => {
               <Link to="/feedback" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
                 Feedback
               </Link>
-              <Link to="/admin" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
-                Admin Panel
-              </Link>
+              {user && (
+                <Link to="/admin" className="nav-link py-2 px-3 rounded hover:bg-accent" onClick={() => setIsOpen(false)}>
+                  Admin Panel
+                </Link>
+              )}
               <hr className="border-border" />
               <div className="flex space-x-2 pt-2">
-                <Link to="/login" className="flex-1">
-                  <Button variant="outline" className="w-full">Sign In</Button>
-                </Link>
-                <Link to="/signup" className="flex-1">
-                  <Button className="w-full bg-civic-blue hover:bg-civic-blue-dark">Get Started</Button>
-                </Link>
+                {user ? (
+                  <Button onClick={handleSignOut} variant="outline" className="w-full text-red-500">
+                    <LogOut size={16} className="mr-2" />
+                    Sign Out
+                  </Button>
+                ) : (
+                  <>
+                    <Link to="/login" className="flex-1">
+                      <Button variant="outline" className="w-full">Sign In</Button>
+                    </Link>
+                    <Link to="/signup" className="flex-1">
+                      <Button className="w-full bg-civic-blue hover:bg-civic-blue-dark">Get Started</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
