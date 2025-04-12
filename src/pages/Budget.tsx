@@ -119,13 +119,13 @@ const Budget = () => {
               </CardHeader>
               
               <CardContent>
-                <Tabs defaultValue="upload" className="w-full">
+                <Tabs defaultValue="summary" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="upload" className="flex items-center">
-                      Upload & Scan
-                    </TabsTrigger>
                     <TabsTrigger value="summary" className="flex items-center">
                       Budget Summary
+                    </TabsTrigger>
+                    <TabsTrigger value="upload" className="flex items-center">
+                      Upload & Scan
                     </TabsTrigger>
                   </TabsList>
                   
